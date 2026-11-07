@@ -108,9 +108,9 @@
     "semantic_hash": ""
   },
   "backend/main.py": {
-    "mtime": 1792930669.1478567,
-    "seen": 1793796739.0835981,
-    "ast_hash": "fb6c31e3acb281999a11ea5979ada9ec",
+    "mtime": 1794017969.0831316,
+    "seen": 1794033962.650793,
+    "ast_hash": "4065ab98bac91f47b31561ed8f9bb596",
     "semantic_hash": ""
   },
   "backend/models.py": {
@@ -624,9 +624,9 @@
     "semantic_hash": ""
   },
   "src/audio_to_tab/chord_neural.py": {
-    "mtime": 1793251584.7027483,
-    "seen": 1793796739.083652,
-    "ast_hash": "e1a38612c37d1d1d583dc464b35373de",
+    "mtime": 1794033891.695721,
+    "seen": 1794033962.653149,
+    "ast_hash": "c724d53c3f894e4e6266984a44e10fd8",
     "semantic_hash": ""
   },
   "src/audio_to_tab/chord_symbols.py": {
@@ -636,9 +636,9 @@
     "semantic_hash": ""
   },
   "src/audio_to_tab/chords.py": {
-    "mtime": 1793796637.0718253,
-    "seen": 1793796739.083654,
-    "ast_hash": "915834008de89a876e554fef36f419c4",
+    "mtime": 1794033608.3135617,
+    "seen": 1794033962.653174,
+    "ast_hash": "0d39ffb17844ec46aad46ef66f735556",
     "semantic_hash": ""
   },
   "src/audio_to_tab/cli/__init__.py": {
@@ -894,21 +894,21 @@
     "semantic_hash": ""
   },
   "tests/test_chord_neural.py": {
-    "mtime": 1793251584.70356,
-    "seen": 1793796739.0836842,
-    "ast_hash": "37ef65604855e28cb7fa75719664ee63",
+    "mtime": 1794033631.586856,
+    "seen": 1794033962.65417,
+    "ast_hash": "81255e86b8f67857c9091d21185fd8b8",
     "semantic_hash": ""
   },
   "tests/test_chord_symbols.py": {
-    "mtime": 1793796685.0522943,
-    "seen": 1793796739.0836852,
-    "ast_hash": "df731590cf378901418835d409bcfe5c",
+    "mtime": 1794033497.8787692,
+    "seen": 1794033962.654171,
+    "ast_hash": "0133b4309a7cf60c2b0fd2b15079db8b",
     "semantic_hash": ""
   },
   "tests/test_chords.py": {
-    "mtime": 1793796499.1780207,
-    "seen": 1793796739.0836859,
-    "ast_hash": "d0304996cb21f88a685be5f10f441a6b",
+    "mtime": 1794033493.4665713,
+    "seen": 1794033962.654172,
+    "ast_hash": "cd16e408915917a9baae0f5b69369d13",
     "semantic_hash": ""
   },
   "tests/test_clear_local_runs.py": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "tests/test_single_flight.py": {
-    "mtime": 1787999408.040651,
-    "seen": 1793796739.083714,
-    "ast_hash": "5b2a4bb61ddfa27539b10931a7946a19",
+    "mtime": 1793947814.9355226,
+    "seen": 1794033962.655024,
+    "ast_hash": "e8785d35e4219b5030a6b8d69186e1de",
     "semantic_hash": ""
   },
   "tests/test_stem_mixer_component.py": {
@@ -1806,15 +1806,15 @@
     "semantic_hash": ""
   },
   "PROJECT_TREE.md": {
-    "mtime": 1793261721.2712386,
-    "seen": 1793796739.083789,
-    "ast_hash": "7aaa46129515b7e357c7f384a8c9fcc1",
+    "mtime": 1793936305.8134167,
+    "seen": 1794033962.657622,
+    "ast_hash": "2c4035d4daa4e6af32a917bedcd69ca2",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1793801442.4322104,
-    "seen": 1793837767.0645142,
-    "ast_hash": "45168437309623d6ecac04827108e02d",
+    "mtime": 1793936305.8178499,
+    "seen": 1794033962.657623,
+    "ast_hash": "c76e8172380978f54cc575f88ff126c0",
     "semantic_hash": ""
   },
   "SECURITY.md": {
@@ -2286,9 +2286,9 @@
     "semantic_hash": ""
   },
   "docs/research/moises/evidence-index.md": {
-    "mtime": 1792755314.5413241,
-    "seen": 1793796739.0838459,
-    "ast_hash": "776621a3a927ea81a33e1fb89e228553",
+    "mtime": 1794031865.466501,
+    "seen": 1794033962.66004,
+    "ast_hash": "44c6a3d75183362bfca61c7e0183148f",
     "semantic_hash": ""
   },
   "docs/research/moises/gaps-vs-audio-tools.md": {
@@ -2463,6 +2463,42 @@
     "mtime": 1793801417.1311643,
     "seen": 1793837767.068759,
     "ast_hash": "e73fb448781b57e21014f09a619ad984",
+    "semantic_hash": ""
+  },
+  "skills-lock.json": {
+    "mtime": 1793865961.9040341,
+    "seen": 1794033962.652902,
+    "ast_hash": "912a3d1f13b8c30d11a845f86df50d90",
+    "semantic_hash": ""
+  },
+  "CONTRIBUTING.md": {
+    "mtime": 1793936305.8134396,
+    "seen": 1794033962.657582,
+    "ast_hash": "6b6a5998f39c71d0920b5991a7bbaed8",
+    "semantic_hash": ""
+  },
+  "docs/research/exploratory-qa-find-only-skills.md": {
+    "mtime": 1793866123.808981,
+    "seen": 1794033962.65968,
+    "ast_hash": "a642d78eb9c1a6b3474395a90af12f82",
+    "semantic_hash": ""
+  },
+  "docs/research/moises/CORE.md": {
+    "mtime": 1794023375.081766,
+    "seen": 1794033962.65971,
+    "ast_hash": "79e116a8d9471d2877f2f1e960ea1963",
+    "semantic_hash": ""
+  },
+  "docs/research/moises/PARITY-BACKLOG.md": {
+    "mtime": 1794023412.0992777,
+    "seen": 1794033962.659888,
+    "ast_hash": "bb6c14bc378eae65d34c5f7ff20eefd8",
+    "semantic_hash": ""
+  },
+  "docs/research/moises/STEMS-AND-CHORDS.md": {
+    "mtime": 1794031860.7897172,
+    "seen": 1794033962.660005,
+    "ast_hash": "3cf113aab16c5c3d1e2c49df48199605",
     "semantic_hash": ""
   },
   "ui/home_component/frontend/package-lock.json": {

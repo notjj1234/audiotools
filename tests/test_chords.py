@@ -373,3 +373,55 @@ def test_no_chords_in_silence(tmp_path):
     ]
     assert pitched == []
     assert any(event.symbol.upper() == "N" and event.start < 1.0 for event in events)
+
+
+def test_detect_chords_falls_back_to_templates_when_btc_returns_none(tmp_path, monkeypatch):
+    path = tmp_path / "progression.wav"
+    _write_progression(path)
+    monkeypatch.setenv("ATT_CHORD_MODEL", "1")
+    monkeypatch.setattr(
+        "audio_to_tab.chord_neural.chord_model_available",
+        lambda _dir=None: True,
+    )
+    monkeypatch.setattr(
+        "audio_to_tab.chord_neural.detect_chords_btc",
+        lambda *_args, **_kwargs: None,
+    )
+    events = detect_chords(path, beats=(0.0, 0.5, 1.0, 1.5, 2.0), bpm=120.0)
+    assert events
+    assert all(isinstance(event.symbol, str) for event in events)
+
+
+def test_detect_chords_passes_beats_to_btc(tmp_path, monkeypatch):
+    path = tmp_path / "progression.wav"
+    _write_progression(path)
+    captured: dict = {}
+
+    def _fake_btc(audio_path, **kwargs):
+        captured["audio_path"] = audio_path
+        captured.update(kwargs)
+        return [
+            ChordEvent(start=0.0, end=2.0, symbol="C", confidence=0.9, simple="C", medium="C"),
+        ]
+
+    monkeypatch.setenv("ATT_CHORD_MODEL", "1")
+    monkeypatch.setattr(
+        "audio_to_tab.chord_neural.chord_model_available",
+        lambda _dir=None: True,
+    )
+    monkeypatch.setattr("audio_to_tab.chord_neural.detect_chords_btc", _fake_btc)
+    beats = (0.0, 0.5, 1.0, 1.5, 2.0)
+    downbeats = (0.0, 2.0)
+    events = detect_chords(
+        path,
+        beats=beats,
+        bpm=120.0,
+        downbeats=downbeats,
+        beats_per_measure=4,
+        bass_path=path,
+    )
+    assert events[0].symbol == "C"
+    assert captured["beats"] == beats
+    assert captured["downbeats"] == downbeats
+    assert captured["beats_per_measure"] == 4
+    assert captured["bass_path"] == path

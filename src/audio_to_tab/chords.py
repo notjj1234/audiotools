@@ -456,6 +456,36 @@ def _bass_bonus(bass_vector: np.ndarray) -> np.ndarray:
     return bonus
 
 
+def _bass_chroma(
+    y: np.ndarray,
+    sr: int,
+    *,
+    bass_path: Path | None = None,
+    tuning_bins: float = 0.0,
+) -> np.ndarray:
+    """Low-register chroma used only for slash-bass decisions."""
+    import librosa
+
+    bass_y = y
+    if bass_path is not None and Path(bass_path).is_file():
+        try:
+            loaded, _bass_sr = librosa.load(str(bass_path), sr=sr, mono=True)
+            if loaded.size >= int(sr * 0.2):
+                bass_y = loaded
+        except Exception:
+            logger.debug("Bass stem unreadable; slash uses the harmony low end", exc_info=True)
+    return librosa.feature.chroma_cqt(
+        y=bass_y,
+        sr=sr,
+        hop_length=_HOP,
+        fmin=librosa.note_to_hz("C2"),
+        n_octaves=3,
+        tuning=tuning_bins,
+        bins_per_octave=_BINS_PER_OCTAVE,
+        norm=None,
+    )
+
+
 def _slash_bass(symbol: str, bass_vector: np.ndarray) -> str:
     chord = parse(symbol)
     if chord is None or bass_vector.size != 12:
@@ -572,7 +602,15 @@ def detect_chords(
                 except Exception:
                     logger.warning("Chord model download failed; using templates", exc_info=True)
             if chord_model_available(neural_dir):
-                neural = detect_chords_btc(path, model_dir=neural_dir, progress=progress)
+                neural = detect_chords_btc(
+                    path,
+                    model_dir=neural_dir,
+                    progress=progress,
+                    beats=beats,
+                    downbeats=downbeats,
+                    beats_per_measure=beats_per_measure,
+                    bass_path=bass_path,
+                )
                 if neural is not None:
                     return neural
             elif model_dir is not None and not Path(model_dir).is_dir():
@@ -610,24 +648,7 @@ def detect_chords(
             bins_per_octave=_BINS_PER_OCTAVE,
             norm=None,
         )
-        bass_y = y
-        if bass_path is not None and Path(bass_path).is_file():
-            try:
-                loaded, _bass_sr = librosa.load(str(bass_path), sr=sr, mono=True)
-                if loaded.size >= int(sr * 0.2):
-                    bass_y = loaded
-            except Exception:
-                logger.debug("Bass stem unreadable; slash uses the harmony low end", exc_info=True)
-        bass_chroma = librosa.feature.chroma_cqt(
-            y=bass_y,
-            sr=sr,
-            hop_length=_HOP,
-            fmin=librosa.note_to_hz("C2"),
-            n_octaves=3,
-            tuning=tuning_bins,
-            bins_per_octave=_BINS_PER_OCTAVE,
-            norm=None,
-        )
+        bass_chroma = _bass_chroma(y, int(sr), bass_path=bass_path, tuning_bins=tuning_bins)
     except Exception as exc:
         logger.warning("Chord chroma failed for %s: %s", path, exc)
         return []

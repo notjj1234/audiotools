@@ -104,3 +104,37 @@ def test_auto_spelling_follows_the_key():
     assert render(parse("A#"), spelling="auto", key="Dm") == "Bb"
     assert render(parse("A#"), spelling="auto", key="D") == "A#"
     assert render(parse("A#"), spelling="sharp") == "A#"
+
+
+def test_btc_mir_eval_symbols_round_trip_through_levels():
+    """Every product symbol `_mir_eval_to_symbol` can emit must parse and level."""
+    from audio_to_tab.chord_neural import _mir_eval_to_symbol
+
+    labels = (
+        "C",
+        "C:min",
+        "C:maj",
+        "C:maj7",
+        "C:min7",
+        "C:minmaj7",
+        "C:7",
+        "C:dim",
+        "C:aug",
+        "C:sus2",
+        "C:sus4",
+        "C:dim7",
+        "C:hdim7",
+        "C:min6",
+        "C:maj6",
+        "G#:min",
+        "N",
+        "X",
+    )
+    for label in labels:
+        symbol = _mir_eval_to_symbol(label)
+        if symbol == "N":
+            continue
+        chord = parse(symbol)
+        assert chord is not None, symbol
+        for level in ("simple", "medium", "advanced"):
+            assert isinstance(level_symbol(chord, level), str)

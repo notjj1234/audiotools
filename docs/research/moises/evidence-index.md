@@ -82,3 +82,30 @@ Renderer file sha256 `791aa79ee729023a10a2d39c18ba717f63dea91ea4c5de29ef0d93fec7
 - Video sync and mix bounce.
 - `audify.node` exports.
 - Behavior of lyrics / mastering / voice-studio beyond icon names and short literals.
+
+## 2026-11-07 — macOS arm64 desktop 2.1.0
+
+This Mac’s install is `/Applications/Moises.app`. Version `2.1.0`, build `261021a1gygumpb`, bundle id `com.todesktop.220410vabqjud82`. One app was found. The asar SHA-256 is `6a42619e39f7ca3c98085e2c2cbcd8fa90397ace6dd133c40c551eee070ef05a` (60,980,438 bytes). That is not the Windows asar `e7242b3d…`. The six shell slices below are byte-identical to the 2026-10-23 Windows slices. The renderer bundle is not: same filename and size, different SHA-256 from `791aa79e…`.
+
+| Alias | ID | Tool | What it supports |
+|---|---|---|---|
+| E-FUSES-MAC | `ev_dc040e43f61d8ab2f625c559db82318755faf02024c0847fa89b6ef302bc81be` | `inspect_electron_fuses` | Electron Framework arm64 SHA-256 `5c471525840dd75e4022d75c37103c8dc3dfdd4d1f6aa407d984fff51b47d767`, bundle version `43.4.1`. RunAsNode on, cookie encryption off, node CLI inspect arguments on, embedded ASAR integrity off, only-load-app-from-asar off. |
+| E-ASAR-MCP | `ev_0a2d4d9af8746639146cda3a708defacf1bf5999622c74866eccd39c63486a4a` | `analyze_javascript_application` | Asar identity and inventory only. MCP read the selected sources as invalid UTF-8 and parsed 0 JavaScript files. Do not use it for behavior. |
+| E-SHELL-MAC | `ev_7be46619691e43141db26504f846bce4e818e945c87b5d949b14a758958e4231` | `analyze_javascript_application` | CLI parse of the offset-corrected extract `/tmp/moises-mac-2.1.0-shell`. 5 JavaScript files, 22,852 AST nodes, 245 findings, 68 literal channels, 79 bridge members, 2 context bridges, 2 browser windows, 1 utility process, 0 sender-validation observations. Directory SHA-256 `9fa28ef4ee5b12e711a10b7c6b5416a9b7c2d053346819544ded4e7b09f7c2d8`. |
+| E-SHELL-MAC-SUM | `ev_940c6dac66984b5c067460ed97e8c23c0d0d1bfafe1f272ec0ae622c1d4a5c6e` | summary view of E-SHELL-MAC | The counts above. Coverage is partial: the renderer bundle was not selected, and semantic coverage is partial. |
+
+`inspect_plist` failed (`native-macos` / `execution_failure`) and was not retried. Plist identity is from `plutil` on this Mac, not from an evidence id. `open_binary` on the app resolved the arm64 executable SHA-256 `c23ee797e063a4fdacc5427f1a005a6a7e47bf18db9ec6b8a68ac74cbe5bc98d`. The session was closed with `close_binary`.
+
+Unfiltered evidence bundle, outside the repo: `/tmp/moises-rea-mac-2.1.0/shell-evidence.json` (29,615,617 bytes). The extract is `/tmp/moises-mac-2.1.0-shell`. Neither is committed.
+
+Shell slice SHA-256, matching the Windows table above: main `7aee9bab8197932b8e9916d550c152869c8758066366eb9998f67df5704ff590`, capture host `650dafffb328ad0b38538fdb66b46d215205556aafc52090dc8e9d439017831b`, capture APIs `b9d7961159f43cb667e3d72e2d209945c96139344c81c1188cb42e3e7beb6639`, preload `c5650c0d6a45331bdd57c3fd8ef011bab31cf90109116b9596206c4f316b714f`, webview preload `ca97c93b63dc95a005d52f1aa426a5bb78ed9bff224b6cc67c125910c2b4d993`, HTML `f82a8c4079c25297dadc4559cda376dec67d7519bb774d0400573d841b16c048`. Renderer `out/renderer/assets/index-C76vPLoN.js` is 1,724,942 bytes, SHA-256 `00cdb566cdaccc4d8d262c203865e18795e7822501dd300e874a3c22261f9844`. `package.json` SHA-256 `ca309322d7381c539b033bca65ea26d9597b75856f4d5b9f2d334b806ca905f7`.
+
+Unpacked `native/capture/README.md` SHA-256 `319a84c897bf05e127653b086ea7a9833b07c0079b47edcba1b748f018510c63` matches the asar integrity record. Unpacked `darwin-arm64/capture.node` SHA-256 `b7002cb4d2bf8fad3fc52e4ba287f2eead1c0001ea5188b5107131a221fcbc8b`. REA recorded an integrity contradiction for that addon and for `MoisesPluginServer`, so those bytes are untrusted against the asar hash.
+
+Logged-out `GET https://studio.moises.ai/play` returned 200 `text/html` (8,610 bytes) and was not executed. No REA id. The body was left in `/tmp/moises-spa.html` and is not committed.
+
+## 2026-11-07 — stems and chords, same build
+
+No new REA id. The shell route is still E-SHELL-MAC. A case-insensitive search of the eight-file extract `/tmp/moises-mac-2.1.0-shell` found `upload/split` twice, `studio.moises.ai` once, and `studio-stage.moises.ai` once. It found no weight extension and no Demucs, Spleeter, Roformer, ONNX Runtime, TensorFlow, Essentia, librosa, CREPE, Chordino, or Basic Pitch name. That search is not an evidence id. The other asar members were not searched.
+
+The Play page for **フルスピード・ボーイ** was read from the screen after the user opened Chords. Stems were opened, Vocals solo was turned on and then off, and Chords was selected again. The transport stayed at 0:39, bar 30. Screen captures stayed in `/tmp` and are not committed. `DevToolsActivePort` still said 9333, and nothing was listening. No request body, cookie, or account id was kept. The notes are in [STEMS-AND-CHORDS.md](STEMS-AND-CHORDS.md).
