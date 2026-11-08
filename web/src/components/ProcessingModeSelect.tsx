@@ -108,7 +108,7 @@ export function ProcessingModeSelect({ value, onChange }: Props) {
           </option>
         ))}
       </select>
-      <span className="hint">{helperText(caps, value, loadError)}</span>
+      <span className="hint mode-hint">{helperText(caps, value, loadError)}</span>
     </label>
   );
 }

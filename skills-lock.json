@@ -7,17 +7,52 @@
       "skillPath": "skills/agent-browser/SKILL.md",
       "computedHash": "60a9cbe5af176150582c019e16e5d3703a41bb02d88438e881349876120d7944"
     },
+    "animations": {
+      "source": "mthines/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/design/animations/SKILL.md",
+      "computedHash": "deb2acfb43991fcb2c05860c364964ccfef3bf2dd613b6e79d5ea76c681c17c2",
+      "installMode": "copy"
+    },
     "browser-uat-analyst": {
       "source": "microsoft/cat-agent-skills",
       "sourceType": "github",
       "skillPath": "submissions/browser-uat-analyst/SKILL.md",
       "computedHash": "0aee56d7ea3372f6490798c42545c5f12fa4aaa621c2784c58655fec8cc83b99"
     },
+    "core-web-vitals": {
+      "source": "addyosmani/web-quality-skills",
+      "sourceType": "github",
+      "skillPath": "skills/core-web-vitals/SKILL.md",
+      "computedHash": "ceaa3e9c9dfa6209ffe923714c0a093b950d0922213d0cf375c27f3d602cc857",
+      "installMode": "copy"
+    },
     "github-issue-writer": {
       "source": "tomlord1122/tomtom-skill",
       "sourceType": "github",
       "skillPath": "skills/github-issue-writer/SKILL.md",
       "computedHash": "9c3a5c6213b5e2c81194c103825f8b3691fc20f5ce44c741d0161dc0a7c324de"
+    },
+    "motion-design": {
+      "source": "LottieFiles/motion-design-skill",
+      "sourceType": "github",
+      "skillPath": "skills/motion-design/SKILL.md",
+      "computedHash": "4f16f46c81f25a2a25b7a4720b7ea001e65f384b31b5b7f4b455fef87fbc9016",
+      "installMode": "copy"
+    },
+    "performance": {
+      "source": "addyosmani/web-quality-skills",
+      "sourceType": "github",
+      "skillPath": "skills/performance/SKILL.md",
+      "computedHash": "25074989a0bbf636fd92e9079270b262a1c63422ed72a854494a8241dea0fcc5",
+      "installMode": "copy"
+    },
+    "smooth-ui": {
+      "source": "FewTone/ui",
+      "sourceType": "github",
+      "skillPath": "skills/smooth-ui/SKILL.md",
+      "computedHash": "f979fe44c1cd99b8e6d25ec773d1df2db2538ac574544f88e091e3568d1f2141",
+      "installMode": "copy"
     }
   }
 }

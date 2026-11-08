@@ -12,6 +12,7 @@ import {
   isolateStartDisabled,
   isolateStartLabel,
 } from "./isolateSubmit";
+import { StableLabel } from "../pending";
 import {
   DEFAULT_TRACK_OPTIONS,
   DEMUCS_STEM_CHECKBOX_IDS,
@@ -422,6 +423,9 @@ export function IsolatePage() {
   const sectionReady = duration !== null;
   const startBlocked =
     busy || Boolean(pickerError) || regionOverCap || (useRegion && !sectionReady);
+  const isolateLabel = isolateStartLabel(busy, job?.status);
+  const isolatePending =
+    busy || job?.status === "pending" || job?.status === "running";
 
   return (
     <div>
@@ -625,18 +629,23 @@ export function IsolatePage() {
           Subtractive bass de-bleed (opt-in)
         </label>
 
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error fade-in">{error}</p>}
         <button
           type="submit"
           disabled={isolateStartDisabled(startBlocked, job?.status)}
+          aria-busy={isolatePending || undefined}
         >
-          {isolateStartLabel(busy, job?.status)}
+          <StableLabel
+            value={isolateLabel}
+            options={["Start isolation", "Starting…", "Job running…"]}
+            pending={isolatePending}
+          />
         </button>
       </form>
 
       <div style={{ marginTop: "1.5rem" }}>
         {jobList.length > 0 && (
-          <div className="results-card" style={{ marginBottom: "1rem" }}>
+          <div className="results-card reveal" style={{ marginBottom: "1rem" }}>
             <h2 className="section-heading">Job queue</h2>
             <p className="hint">
               Jobs run one at a time. Queuing several songs means a long wait and high
@@ -681,7 +690,7 @@ export function IsolatePage() {
       </div>
 
       {job?.status === "succeeded" && (
-        <div className="results-card" style={{ marginTop: "1rem" }}>
+        <div className="results-card reveal" style={{ marginTop: "1rem" }}>
           <h2 className="section-heading">
             Your files
             {clipLabel && (

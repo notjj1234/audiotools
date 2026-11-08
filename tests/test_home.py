@@ -440,6 +440,19 @@ def test_home_v2_keeps_the_legacy_path():
     assert "#E9EEF5" not in css
 
 
+def test_home_v2_first_open_does_not_rerun_through_skeletons():
+    source = (
+        Path(__file__).resolve().parents[1] / "ui" / "pages" / "home.py"
+    ).read_text(encoding="utf-8")
+    body = source.split("def _main_v2", 1)[1].split("\ndef ", 1)[0]
+    assert "home_v2_first_paint_done" in body
+    assert "or first_paint" not in body
+    flag = 'st.session_state["home_v2_first_paint_done"] = True'
+    assert flag in body
+    after = body.split(flag, 1)[1].lstrip()
+    assert not after.startswith("st.rerun()")
+
+
 def test_advance_background_analysis_covers_the_backlog_one_song_at_a_time():
     from ui.isolate_jobs import advance_background_analysis
 

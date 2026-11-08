@@ -29,6 +29,7 @@ import {
   panSpoken,
   snapPanToCenter,
 } from "../mixer/pan";
+import { Fold, StableLabel } from "../pending";
 import {
   PRACTICE_KEY_DEFAULT,
   PRACTICE_KEY_MAX,
@@ -71,6 +72,7 @@ export function StemMixer({
   const engineRef = useRef(new StemMixerEngine());
   const recorderRef = useRef<MediaRecorder | null>(null);
   const [status, setStatus] = useState("Ready");
+  const [stemsReady, setStemsReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -137,6 +139,7 @@ export function StemMixer({
     setPreset("all");
     setState(next);
     setStatus("Loading stems…");
+    setStemsReady(false);
     let cancelled = false;
     void engine
       .loadStems(stems, (_l, _t, msg) => {
@@ -150,6 +153,9 @@ export function StemMixer({
             : `Loaded ${stems.length} stem(s)`
         );
         engine.applyGains(effectiveGains(stems.map((s) => s.id), next));
+      })
+      .finally(() => {
+        if (!cancelled) setStemsReady(true);
       });
     engine.setTimeCallback((t, dur, isPlaying) => {
       setCurrentTime(chartTimeSeconds(t, engine.chartLatencyMs()));
@@ -454,7 +460,8 @@ export function StemMixer({
         </button>
       </div>
 
-      <div id="mix-menu" className="mixer-master" hidden={!mixOpen}>
+      <Fold open={mixOpen}>
+      <div id="mix-menu" className="mixer-master">
         <div className="mixer-presets">
           {presetButtons.map((item) => {
             const disabled =
@@ -507,14 +514,20 @@ export function StemMixer({
           className="ghost"
           onClick={() => void downloadMix()}
           disabled={mixBusy || !canSeek}
+          aria-busy={mixBusy || undefined}
         >
-          {mixBusy ? "Building mix…" : "Download current mix"}
+          <StableLabel
+            value={mixBusy ? "Building mix…" : "Download current mix"}
+            options={["Download current mix", "Building mix…"]}
+            pending={mixBusy}
+          />
         </button>
       </div>
+      </Fold>
+      <Fold open={speedOpen}>
       <div
         id="practice-speed-popover"
         className="mixer-practice"
-        hidden={!speedOpen}
         role="group"
         aria-label="Speed and Key"
         onDoubleClick={(e) => {
@@ -602,7 +615,8 @@ export function StemMixer({
           </p>
         )}
       </div>
-      {mixError && <p className="error">{mixError}</p>}
+      </Fold>
+      {mixError && <p className="error fade-in">{mixError}</p>}
 
       <div className="mixer-stage">
         <label className="master-vol">
@@ -624,7 +638,27 @@ export function StemMixer({
             {masterDb.toFixed(1)}
           </span>
         </label>
-      <div className="mixer-stems">
+      <div className="mixer-stems" data-stems={stemsReady ? "ready" : "loading"} aria-busy={!stemsReady || undefined}>
+        <div className="stem-skeleton" aria-hidden="true">
+          {stems.map((stem) => (
+            <div className="stem-row" key={stem.id}>
+              <span className="sk sk-toggle" />
+              <span className="sk sk-toggle" />
+              <span className="sk sk-name" />
+              <span className="sk sk-link" />
+              <span className="sk sk-slider" />
+              <span className="sk sk-pan" />
+            </div>
+          ))}
+        </div>
+        <div
+          className="stem-live"
+          ref={(node) => {
+            if (!node) return;
+            if (stemsReady) node.removeAttribute("inert");
+            else node.setAttribute("inert", "");
+          }}
+        >
         {stems.map((stem) => {
           const db = state.volumesDb[stem.id] ?? DB_DEFAULT;
           const pan = clampPan(state.pan?.[stem.id] ?? PAN_DEFAULT);
@@ -733,14 +767,16 @@ export function StemMixer({
             </div>
           );
         })}
+        </div>
       </div>
       {anyPanned && (
         <p className="hint">Download current mix includes your pan.</p>
       )}
       </div>
+      <Fold open={sheetOpen}>
       <PracticeSheet
         id="practice-panel"
-        hidden={!sheetOpen}
+        hidden={false}
         analysis={analysis}
         tab={tab}
         currentTime={currentTime}
@@ -749,6 +785,7 @@ export function StemMixer({
           void engineRef.current.seek(time);
         }}
       />
+      </Fold>
     </div>
   );
 }

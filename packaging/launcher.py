@@ -814,9 +814,17 @@ def _streamlit_server_argv(workdir: Path, port: int) -> list[str]:
     ]
 
 
+def _prefer_explicit_navigation() -> None:
+    """st.navigation owns the sidebar. pages/ mode paints filenames before it runs."""
+    from streamlit.runtime.pages_manager import PagesManager
+
+    PagesManager.uses_pages_directory = False
+
+
 def run_streamlit_server(workdir: Path, port: int) -> int:
     """Server role: hand the main thread to Streamlit (it installs signal handlers)."""
     _log(f"Server process {os.getpid()} running Streamlit on 127.0.0.1:{port}")
+    _prefer_explicit_navigation()
     from streamlit.web import cli as stcli
 
     sys.argv = _streamlit_server_argv(workdir, port)
@@ -1042,12 +1050,8 @@ def window_background_color(mode: str | None) -> str:
 
 
 def launch_shell_html(background: str) -> str:
-    """Quiet Home-shaped first paint. No logo, no splash branding."""
+    """First frame is the window wash. No splash, skeleton, or progress line."""
     bg = str(background or _WINDOW_BG_DARK).strip() or _WINDOW_BG_DARK
-    light = bg.upper() == _WINDOW_BG_LIGHT
-    rail = "#142033" if not light else "#F0E6C8"
-    wash = "#2a4467" if not light else "#E8DCC0"
-    text = "#d5deea" if not light else "#3a3a3a"
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1059,62 +1063,10 @@ def launch_shell_html(background: str) -> str:
     margin: 0;
     height: 100%;
     background: {bg};
-    color: {text};
-    font-family: system-ui, sans-serif;
-  }}
-  .shell {{
-    display: flex;
-    height: 100%;
-    min-height: 100%;
-  }}
-  .rail {{
-    width: 240px;
-    flex: 0 0 240px;
-    background: {rail};
-  }}
-  .main {{
-    flex: 1;
-    min-width: 0;
-    padding: 24px 20px 0 33px;
-  }}
-  .heading {{
-    margin: 32px 0 12px;
-    font-size: 18px;
-    line-height: 26px;
-    font-weight: 500;
-    color: {text};
-  }}
-  .skel {{
-    height: 56px;
-    margin: 0;
-    background: {wash};
-    border-bottom: 1px solid transparent;
-  }}
-  .cue {{
-    margin: 8px 0 16px;
-    font-size: 13px;
-    line-height: 18px;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    opacity: 0.85;
-  }}
-  @media (prefers-reduced-motion: reduce) {{
-    .cue {{ opacity: 1; }}
   }}
 </style>
 </head>
-<body>
-  <div class="shell">
-    <aside class="rail" aria-hidden="true"></aside>
-    <main class="main">
-      <div class="cue">Starting…</div>
-      <div class="heading">Files</div>
-      <div class="skel" data-skel="0"></div>
-      <div class="skel" data-skel="1"></div>
-      <div class="skel" data-skel="2"></div>
-    </main>
-  </div>
-</body>
+<body></body>
 </html>
 """
 

@@ -399,18 +399,42 @@ def test_main_dispatches_to_server_role(tmp_path, monkeypatch):
     assert launcher.main() == 7
 
 
-def test_launch_shell_html_looks_like_home():
+def test_launch_shell_html_is_only_the_window_wash():
     launcher = _load_launcher()
     dark = launcher.launch_shell_html("#192542")
     light = launcher.launch_shell_html("#FFF6DC")
     assert "#192542" in dark
-    assert "data-skel" in dark
-    assert "Files" in dark
-    assert "Starting…" in dark
+    assert "data-skel" not in dark
+    assert "Files" not in dark
+    assert "Starting" not in dark
     assert "logo" not in dark.lower()
     assert "Audio Tools" not in dark
     assert "#FFF6DC" in light
-    assert "prefers-reduced-motion" in dark
+    assert "prefers-reduced-motion" not in dark
+
+
+def test_server_skips_pages_directory_nav_before_streamlit_starts(monkeypatch):
+    """Filename sidebar is Streamlit's pages/ mode, published before app.py runs."""
+    launcher = _load_launcher()
+    from streamlit.runtime.pages_manager import PagesManager
+
+    previous = PagesManager.uses_pages_directory
+    PagesManager.uses_pages_directory = None
+    seen: dict[str, object] = {}
+
+    def fake_main() -> int:
+        seen["flag"] = PagesManager.uses_pages_directory
+        return 0
+
+    import streamlit.web.cli as stcli
+
+    monkeypatch.setattr(stcli, "main", fake_main)
+    monkeypatch.setattr(launcher, "_streamlit_server_argv", lambda workdir, port: [])
+    try:
+        assert launcher.run_streamlit_server(Path("."), 8501) == 0
+    finally:
+        PagesManager.uses_pages_directory = previous
+    assert seen["flag"] is False
 
 
 def test_native_window_creates_with_url_after_health(tmp_path, monkeypatch):
@@ -441,7 +465,8 @@ def test_native_window_creates_with_url_after_health(tmp_path, monkeypatch):
     create_kwargs = calls["create"][0][1]
     assert "url" not in create_kwargs
     shell = create_kwargs.get("html") or ""
-    assert "data-skel" in shell
+    assert "data-skel" not in shell
+    assert "Starting" not in shell
     assert "#192542" in shell or "#FFF6DC" in shell
     assert window.loaded == ["http://127.0.0.1:8501"]
     assert calls["start"][0]["private_mode"] is False

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import RegionsPlugin from "wavesurfer.js/dist/plugins/regions.esm.js";
 import type { Region } from "wavesurfer.js/dist/plugins/regions.js";
@@ -33,6 +33,7 @@ export function RegionPicker({
   const playBtnRef = useRef<HTMLButtonElement | null>(null);
   const metaRef = useRef<HTMLSpanElement | null>(null);
   const suppressingRef = useRef(false);
+  const [ready, setReady] = useState(false);
 
   onChangeRef.current = onChange;
   boundsRef.current = { startSec, endSec, minLengthSec };
@@ -42,6 +43,7 @@ export function RegionPicker({
     if (!el || !audioUrl) return;
 
     let cancelled = false;
+    setReady(false);
     const regions = RegionsPlugin.create();
     const ws = WaveSurfer.create({
       container: el,
@@ -98,6 +100,7 @@ export function RegionPicker({
 
     ws.on("ready", () => {
       if (cancelled) return;
+      setReady(true);
       const { startSec: s, endSec: e } = boundsRef.current;
       syncRegion(s, e);
       if (playBtnRef.current) playBtnRef.current.disabled = false;
@@ -174,7 +177,10 @@ export function RegionPicker({
         </button>
         <span className="hint" ref={metaRef} />
       </div>
-      <div className="region-picker-wave" ref={containerRef} />
+      <div className={`region-picker-wave${ready ? " is-ready" : ""}`} aria-busy={!ready || undefined}>
+        <div className="skeleton-block sk" aria-hidden="true" />
+        <div ref={containerRef} />
+      </div>
       <span className="hint">Drag the handles or the region to trim.</span>
     </div>
   );

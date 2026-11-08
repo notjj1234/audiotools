@@ -1,4 +1,5 @@
-import { NavLink, Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { useLayoutEffect, useRef, useState } from "react";
 import { AuthProvider, useAuth } from "./auth";
 import { CookieBanner } from "./components/CookieBanner";
 import { SiteFooter } from "./components/SiteFooter";
@@ -11,6 +12,14 @@ import { SettingsPage } from "./pages/SettingsPage";
 function Shell() {
   const { loading, sessionError, retrySession, email, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routePrev = useRef(location.pathname);
+  const [routeAnimate, setRouteAnimate] = useState(false);
+  useLayoutEffect(() => {
+    if (routePrev.current === location.pathname) return;
+    routePrev.current = location.pathname;
+    setRouteAnimate(true);
+  }, [location.pathname]);
 
   const handleAuthClick = () => {
     if (email) {
@@ -63,8 +72,14 @@ function Shell() {
           >
             Legal
           </NavLink>
-          <span className="user-info">
-            {email ? `Signed in as ${email}` : "Anonymous"}
+          <span className="user-info" aria-busy={loading || undefined}>
+            {loading ? (
+              <span className="user-skeleton" aria-hidden="true" />
+            ) : email ? (
+              `Signed in as ${email}`
+            ) : (
+              "Anonymous"
+            )}
           </span>
           <button
             type="button"
@@ -82,7 +97,7 @@ function Shell() {
           </a>
         </nav>
       </header>
-      <main id="main-content">
+      <main id="main-content" key={location.pathname} className={routeAnimate ? "route-fade" : undefined}>
         <Outlet />
       </main>
       <SiteFooter />

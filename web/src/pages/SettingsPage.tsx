@@ -4,6 +4,7 @@ import * as api from "../api";
 import { useAuth } from "../auth";
 import { ThemeSelector } from "../components/ThemeSelector";
 import { LEGAL_PLACEHOLDERS } from "../legal/placeholders";
+import { StableLabel } from "../pending";
 
 export function SettingsPage() {
   const { email, logout } = useAuth();
@@ -56,14 +57,19 @@ export function SettingsPage() {
         <p id="delete-help" className="hint">
           This cannot be undone for this demo database.
         </p>
-        {error && <p className="error">{error}</p>}
+        {error && <p className="error fade-in">{error}</p>}
         <button
           type="button"
           className="danger"
           disabled={busy || confirm !== "DELETE"}
+          aria-busy={busy || undefined}
           onClick={() => void onDelete()}
         >
-          {busy ? "Deleting…" : "Delete my account & data"}
+          <StableLabel
+            value={busy ? "Deleting…" : "Delete my account & data"}
+            options={["Delete my account & data", "Deleting…"]}
+            pending={busy}
+          />
         </button>
       </section>
 

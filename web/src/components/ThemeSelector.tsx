@@ -3,6 +3,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { ColorSwatch } from './ColorSwatch';
 import { ColorPicker } from './ColorPicker';
 import { useState } from 'react';
+import { Fold } from '../pending';
 
 const TOKEN_GROUPS = {
   'Base Layers': [
@@ -51,6 +52,7 @@ function CustomThemeBuilder({ customTokens, onChange, onReset }: { customTokens:
         <div key={groupName} style={{ marginBottom: '0.75rem' }}>
           <button
             type="button"
+            aria-expanded={expandedGroups.includes(groupName)}
             onClick={() => toggleGroup(groupName)}
             style={{
               width: '100%',
@@ -68,10 +70,14 @@ function CustomThemeBuilder({ customTokens, onChange, onReset }: { customTokens:
             }}
           >
             {groupName}
-            <span style={{ transform: expandedGroups.includes(groupName) ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>▼</span>
+            <span
+              className={`theme-chevron${expandedGroups.includes(groupName) ? " is-open" : ""}`}
+              aria-hidden="true"
+            >
+              ▼
+            </span>
           </button>
-          
-          {expandedGroups.includes(groupName) && (
+          <Fold open={expandedGroups.includes(groupName)}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', marginTop: '0.5rem', paddingLeft: '0.5rem' }}>
               {tokens.map(({ key, label, default: def }) => (
                 <ColorPicker
@@ -83,7 +89,7 @@ function CustomThemeBuilder({ customTokens, onChange, onReset }: { customTokens:
                 />
               ))}
             </div>
-          )}
+          </Fold>
         </div>
       ))}
       
@@ -159,6 +165,7 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
               key={preset.id}
               type="button"
               onClick={() => setPreset(preset.id)}
+              className="theme-preset"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -169,8 +176,7 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
                 border: `2px solid ${presetId === preset.id ? 'var(--color-accent-primary)' : 'var(--color-border-subtle)'}`,
                 background: presetId === preset.id ? 'var(--color-bg-highlight)' : 'var(--color-bg-deep)',
                 cursor: 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.15s ease'
+                textAlign: 'center'
               }}
               title={preset.description}
             >

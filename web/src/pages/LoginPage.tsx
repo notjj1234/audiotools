@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
+import { StableLabel } from "../pending";
 
 export function LoginPage() {
   const { email, loading, login } = useAuth();
@@ -71,9 +72,13 @@ export function LoginPage() {
             <Link to="/legal/privacy">Privacy policy</Link>.
           </span>
         </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy || !acceptTerms}>
-          {busy ? "Signing in…" : "Sign in"}
+        {error && <p className="error fade-in">{error}</p>}
+        <button type="submit" disabled={busy || !acceptTerms} aria-busy={busy || undefined}>
+          <StableLabel
+            value={busy ? "Signing in…" : "Sign in"}
+            options={["Sign in", "Signing in…"]}
+            pending={busy}
+          />
         </button>
       </form>
     </div>

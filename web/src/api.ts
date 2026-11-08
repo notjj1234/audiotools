@@ -10,6 +10,8 @@ export type JobResponse = {
   error: string | null;
   artifacts: Record<string, string>;
   title?: string | null;
+  /** 0–1 or 0–100 when the job payload includes it. Absent today. */
+  percent?: number | null;
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";

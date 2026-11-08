@@ -3,6 +3,7 @@ import * as api from "../api";
 import { JobProgress } from "../components/JobProgress";
 import { ProcessingModeSelect } from "../components/ProcessingModeSelect";
 import { HOSTED_FILE_ONLY_NOTE, TRACK_OPTIONS } from "../trackOptions";
+import { StableLabel } from "../pending";
 
 export function TabPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -113,9 +114,13 @@ export function TabPage() {
           />
           Subtractive bass de-bleed (opt-in)
         </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={tabJobRunning}>
-          {busy ? "Starting…" : tabJobRunning ? "Job running…" : "Create tab job"}
+        {error && <p className="error fade-in">{error}</p>}
+        <button type="submit" disabled={tabJobRunning} aria-busy={tabJobRunning || undefined}>
+          <StableLabel
+            value={busy ? "Starting…" : tabJobRunning ? "Job running…" : "Create tab job"}
+            options={["Create tab job", "Starting…", "Job running…"]}
+            pending={tabJobRunning}
+          />
         </button>
       </form>
 
@@ -131,7 +136,7 @@ export function TabPage() {
       </div>
 
       {job?.status === "succeeded" && job.artifacts.pdf && (
-        <div className="results-card" style={{ marginTop: "1rem" }}>
+        <div className="results-card reveal" style={{ marginTop: "1rem" }}>
           <h2 className="section-heading">Your files</h2>
           <div className="artifacts">
             <a className="btn" href={job.artifacts.pdf} download>
