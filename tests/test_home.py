@@ -769,3 +769,29 @@ def test_home_delete_ui_selects_rows_except_the_one_being_analysed():
     assert 'selectMode && libraryFilter !== "deleted"' in frontend
     assert 'dataset.focusid = "select-mode"' in frontend
     assert "att-home-files-scroll" in frontend
+
+
+def test_home_files_toolbar_is_minimal():
+    frontend = (
+        Path(__file__).resolve().parents[1]
+        / "ui"
+        / "home_component"
+        / "frontend"
+        / "src"
+        / "main.ts"
+    ).read_text(encoding="utf-8")
+    assert 'dataset.focusid = "sort"' not in frontend
+    assert 'kind: "sort"' not in frontend
+    assert 'kind: "setlist"' in frontend
+    assert '"Setlists"' in frontend
+    assert 'dataset.focusid = "setlist-menu"' in frontend
+    assert "Pick a local file" in frontend
+    assert 'dataset.focusid = "select-mode"' in frontend
+    assert 'dataset.focusid = "add-file"' in frontend
+    assert "Library filters" in frontend
+    assert 'dataset.pill = "new"' not in frontend
+    assert 'dataset.pill = "all"' not in frontend
+    # Setlist menu actions close the popup before the Streamlit round-trip.
+    assert frontend.count('send(nonce, "new_setlist"') == 1
+    new_at = frontend.index('send(nonce, "new_setlist"')
+    assert "paint(lastProps)" in frontend[new_at - 80 : new_at]

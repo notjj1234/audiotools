@@ -63,7 +63,7 @@ type Props = {
 };
 
 type MenuState = {
-  kind: "row" | "sort";
+  kind: "row" | "setlist";
   token: string;
   focusId: string;
   x: number;
@@ -75,7 +75,6 @@ const ICONS = {
   save: "<path d='M7.2.8h2.2v6.4h2.8L8.3 11.6 4.4 7.2h2.8zM2.2 12.4h12.2V15.2H2.2z'/>",
   doc: "<path d='M3.2 1h6.4L13.6 5.2V15H3.2zM9.2 1.4V5.6h4'/>",
   search: "<path fill-rule='evenodd' d='M7 1.4a4.4 4.4 0 1 0 2.7 7.9l3.2 3.2 1.2-1.2-3.2-3.2A4.4 4.4 0 0 0 7 1.4zm0 2a2.4 2.4 0 1 1 0 4.8 2.4 2.4 0 0 1 0-4.8z'/>",
-  sort: "<path d='M2 3h12v2H2zm0 4h8v2H2zm0 4h4v2H2z'/>",
   more: "<path d='M2.2 6.7h2.6v2.6H2.2zm4.5 0h2.6v2.6H6.7zm4.5 0H13.8v2.6h-2.6z'/>",
   chevL: "<path d='M10.2 2.2 5 8l5.2 5.8h2.2L7.4 8l5-5.8z'/>",
   chevR: "<path d='M5.8 2.2 11 8l-5.2 5.8H3.6L8.6 8l-5-5.8z'/>",
@@ -381,65 +380,23 @@ function paint(props: Props): void {
   const top = el("div", "files-row");
   const filesHeading = el("h2");
   filesHeading.textContent = "Files";
-  const toolbar = el("div", "toolbar");
-  const all = el("button", "pill");
-  all.type = "button";
-  all.dataset.pill = "all";
-  all.dataset.focusid = "pill-all";
-  all.textContent = "All";
-  all.setAttribute("aria-pressed", activeSetlistId ? "false" : "true");
-  all.addEventListener("click", () => {
-    activeSetlistId = "";
-    paint(lastProps);
-    send(nonce, "select_setlist", "");
-  });
-  const pills = [all];
-  setlists.forEach((item) => {
-    const pill = el("button", "pill");
-    pill.type = "button";
-    pill.dataset.pill = item.id;
-    pill.dataset.focusid = `pill-${item.id}`;
-    pill.textContent = item.name;
-    pill.setAttribute("aria-pressed", item.id === activeSetlistId ? "true" : "false");
-    pill.addEventListener("click", () => {
-      activeSetlistId = item.id;
-      paint(lastProps);
-      send(nonce, "select_setlist", item.id);
-    });
-    pills.push(pill);
-  });
-  const create = el("button", "pill");
-  create.type = "button";
-  create.dataset.pill = "new";
-  create.dataset.focusid = "pill-new";
-  create.textContent = "New setlist";
-  create.setAttribute("aria-pressed", "false");
-  create.addEventListener("click", () => {
-    const name = window.prompt("Setlist name");
-    if (name === null) return;
-    send(nonce, "new_setlist", name);
-  });
   const selected = setlists.find((item) => item.id === activeSetlistId);
-  const rename = el("button", "pill");
-  const removeList = el("button", "pill");
-  if (selected) {
-    rename.type = "button";
-    rename.dataset.focusid = "setlist-rename";
-    rename.textContent = "Rename";
-    rename.addEventListener("click", () => {
-      const name = window.prompt("Setlist name", selected.name);
-      if (name === null) return;
-      send(nonce, "rename_setlist", `${selected.id}|${name}`);
+  const setlistTrigger = el("button", "setlist-trigger");
+  setlistTrigger.type = "button";
+  setlistTrigger.dataset.focusid = "setlist-menu";
+  setlistTrigger.setAttribute("aria-haspopup", "menu");
+  setlistTrigger.setAttribute("aria-label", "Setlists");
+  setlistTrigger.textContent = selected ? selected.name : "Setlists";
+  setlistTrigger.addEventListener("click", () => {
+    const box = setlistTrigger.getBoundingClientRect();
+    openMenu({
+      kind: "setlist",
+      token: "",
+      focusId: "setlist-menu",
+      x: box.left,
+      y: box.bottom + 4,
     });
-    removeList.type = "button";
-    removeList.dataset.focusid = "setlist-delete";
-    removeList.textContent = "Delete setlist";
-    removeList.addEventListener("click", () => {
-      if (!window.confirm("Delete this setlist? Songs stay in the library.")) return;
-      activeSetlistId = "";
-      send(nonce, "delete_setlist", selected.id);
-    });
-  }
+  });
   const search = el("label", "search");
   search.appendChild(document.createRange().createContextualFragment(svg("search", 16)));
   const input = el("input");
@@ -455,18 +412,6 @@ function paint(props: Props): void {
     document.querySelector<HTMLInputElement>("#home-search")?.focus();
   });
   search.append(input);
-  const sort = el("button", "icon-btn");
-  sort.type = "button";
-  sort.dataset.focusid = "sort";
-  sort.setAttribute("aria-label", "Sort");
-  sort.setAttribute("aria-haspopup", "menu");
-  sort.innerHTML = svg("sort", 16);
-  sort.addEventListener("click", () => {
-    const box = sort.getBoundingClientRect();
-    openMenu({ kind: "sort", token: "", focusId: "sort", x: box.left, y: box.bottom + 4 });
-  });
-  toolbar.append(...pills, create);
-  if (selected) toolbar.append(rename, removeList);
   const filters = el("div", "filters");
   filters.setAttribute("role", "group");
   filters.setAttribute("aria-label", "Library filters");
@@ -506,8 +451,8 @@ function paint(props: Props): void {
   add.textContent = "Pick a local file";
   add.addEventListener("click", () => send(nonce, "open_card", "learn"));
   const tools = el("div", "files-tools");
-  tools.append(add, search, sort);
-  top.append(filesHeading, toolbar, tools);
+  tools.append(search, add);
+  top.append(filesHeading, setlistTrigger, tools);
   head.append(top, filters);
   main.append(head);
 
@@ -710,10 +655,21 @@ function paint(props: Props): void {
     const menuRow = (props.rows || []).find((row) => row.token === menu?.token);
     const lockedMenu = menu.kind === "row" && menuRow !== undefined && isLocked(menuRow);
     const allItems: { label: string; type: string; id: string }[] =
-      menu.kind === "sort"
+      menu.kind === "setlist"
         ? [
-            { label: "Newest", type: "sort-newest", id: "newest" },
-            { label: "Oldest", type: "sort-oldest", id: "oldest" },
+            { label: "All files", type: "select_setlist", id: "" },
+            ...setlists.map((item) => ({
+              label: item.name,
+              type: "select_setlist",
+              id: item.id,
+            })),
+            { label: "New setlist", type: "new_setlist", id: "" },
+            ...(selected
+              ? [
+                  { label: "Rename", type: "rename_setlist", id: selected.id },
+                  { label: "Delete setlist", type: "delete_setlist", id: selected.id },
+                ]
+              : []),
           ]
         : [
             { label: "Open", type: "open_row", id: menu.token },
@@ -772,10 +728,39 @@ function paint(props: Props): void {
       button.type = "button";
       button.setAttribute("role", "menuitem");
       button.textContent = item.label;
+      if (menu?.kind === "setlist" && item.type === "select_setlist") {
+        button.setAttribute("aria-checked", item.id === activeSetlistId ? "true" : "false");
+      }
       button.addEventListener("click", () => {
-        if (item.type === "sort-newest" || item.type === "sort-oldest") {
-          sortOldest = item.type === "sort-oldest";
-          closeMenu(true);
+        if (item.type === "select_setlist") {
+          activeSetlistId = item.id;
+          menu = null;
+          paint(lastProps);
+          send(nonce, "select_setlist", item.id);
+          return;
+        }
+        if (item.type === "new_setlist") {
+          const name = window.prompt("Setlist name");
+          if (name === null) return;
+          menu = null;
+          paint(lastProps);
+          send(nonce, "new_setlist", name);
+          return;
+        }
+        if (item.type === "rename_setlist" && selected) {
+          const name = window.prompt("Setlist name", selected.name);
+          if (name === null) return;
+          menu = null;
+          paint(lastProps);
+          send(nonce, "rename_setlist", `${selected.id}|${name}`);
+          return;
+        }
+        if (item.type === "delete_setlist" && selected) {
+          if (!window.confirm("Delete this setlist? Songs stay in the library.")) return;
+          activeSetlistId = "";
+          menu = null;
+          paint(lastProps);
+          send(nonce, "delete_setlist", selected.id);
           return;
         }
         const type = item.type;
