@@ -28,10 +28,21 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - py3.10
     tomllib = None
 
+_ROOT = Path(__file__).resolve().parents[1]
+
 
 @pytest.mark.parametrize("module", CLI_MODULES)
 def test_cli_help_exits_zero(module: str) -> None:
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    # pytest injects src/ into sys.path (tests/conftest.py); the CLI subprocess
+    # needs the same so a bare checkout works without `pip install -e .`.
+    pythonpath = os.pathsep.join(
+        [str(_ROOT / "src"), str(_ROOT), os.environ.get("PYTHONPATH", "")]
+    ).rstrip(os.pathsep)
+    env = {
+        **os.environ,
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONPATH": pythonpath,
+    }
     proc = subprocess.run(
         [sys.executable, "-m", f"audio_to_tab.cli.{module}", "--help"],
         capture_output=True,

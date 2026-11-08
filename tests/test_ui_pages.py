@@ -363,6 +363,9 @@ def test_home_relative_age_and_search_and_real_destinations() -> None:
     assert "Voice Studio" not in page
     assert "Lyric" not in page
     assert 'open_new_separation' in page
-    assert 'youtube_audio.py' in page
-    assert 'tab_pdf.py' in page
+    # 0.1.6 removed Home's page cards; YouTube and Tab PDF are sidebar pages now,
+    # so the real destinations are asserted on the navigation, not on Home.
+    app = (Path(__file__).resolve().parents[1] / "ui" / "app.py").read_text(encoding="utf-8")
+    assert 'youtube_audio.py' in app
+    assert 'tab_pdf.py' in app
     assert "open_saved_run" in page

@@ -59,7 +59,7 @@ def test_run_demucs_subprocess_when_not_frozen(monkeypatch):
         assert env["OMP_NUM_THREADS"] == env["TORCH_NUM_THREADS"]
 
     assert len(seen) == 1
-    assert "-m" in seen[0] and "demucs" in seen[0]
+    assert "-m" in seen[0] and "audio_to_tab.demucs_bootstrap" in seen[0]
     assert "htdemucs_6s" in seen[0]
 
 

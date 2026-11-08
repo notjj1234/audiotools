@@ -282,6 +282,9 @@ def run_demucs(
     """
     Run Demucs with CLI-style args (everything after ``python -m demucs``).
 
+    The subprocess path launches ``audio_to_tab.demucs_bootstrap`` so Demucs
+    writes stems through soundfile instead of torchcodec.
+
     When frozen (PyInstaller), invokes ``demucs.separate.main`` in-process because
     ``sys.executable`` is the app binary and cannot run ``-m demucs``.
     Otherwise uses a subprocess so tests and local runs keep the same isolation.
@@ -292,7 +295,10 @@ def run_demucs(
     if getattr(sys, "frozen", False):
         from demucs.separate import main as demucs_main
 
+        from audio_to_tab.demucs_bootstrap import install_soundfile_writer
+
         apply_recommended_cpu_threads()
+        install_soundfile_writer()
         try:
             demucs_main(demucs_args)
         except SystemExit as exc:
@@ -301,7 +307,7 @@ def run_demucs(
                 raise RuntimeError(f"Demucs failed with exit code {code}") from exc
         return
 
-    cmd = [sys.executable, "-m", "demucs", *demucs_args]
+    cmd = [sys.executable, "-m", "audio_to_tab.demucs_bootstrap", *demucs_args]
     env = os.environ.copy()
     env.update(cpu_thread_env())
     result = run_process(

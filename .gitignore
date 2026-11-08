@@ -84,3 +84,6 @@ Thumbs.db
 
 # Cursor local tooling / config (skills stay on disk, not in git)
 .cursor/
+
+# graphify output is generated (15 MB, rewritten every run) — keep it local
+graphify-out/
