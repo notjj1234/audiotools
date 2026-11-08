@@ -35,6 +35,7 @@ from ui.isolate_state import (
     ISOLATE_USER_ID_FILENAME,
     LISTEN_PICKER_NEXT_KEY,
     SHELL_TAB_KEY,
+    SOURCE_KIND_YOUTUBE,
     add_open_mix_tab,
     format_source_title,
     infer_source_kind,
@@ -42,6 +43,7 @@ from ui.isolate_state import (
     open_home_shell,
     open_mix_shell,
     recent_runs_with_owner_fallback,
+    youtube_video_id,
 )
 
 _HOME_CSS = """
@@ -160,6 +162,23 @@ def run_label(row: dict) -> str:
     )
 
 
+def recent_art_url(row: dict) -> str:
+    """Path-free Recents thumb: public YouTube CDN URL, else empty (generic motif)."""
+    kind = infer_source_kind(
+        source_kind=row.get("source_kind"),
+        source_fingerprint=row.get("source_fingerprint"),
+    )
+    if kind != SOURCE_KIND_YOUTUBE:
+        return ""
+    fingerprint = str(row.get("source_fingerprint") or "")
+    prefix = "youtube:"
+    url = fingerprint[len(prefix) :] if fingerprint.startswith(prefix) else ""
+    vid = youtube_video_id(url) or ""
+    if not vid or not all(c.isalnum() or c in "-_" for c in vid):
+        return ""
+    return f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg"
+
+
 def _go(page_name: str) -> None:
     st.session_state["_nav_loading"] = True
     st.switch_page(str(Path(__file__).with_name(page_name)))
@@ -193,12 +212,19 @@ def analysis_summary(row: dict) -> dict | None:
         return None
     if result is None:
         return None
-    return {
+    summary = {
         "bpm": result.bpm,
         "key": result.key,
         "chord_count": len(result.chords),
         "section_count": len(result.sections),
     }
+    try:
+        duration = float(result.duration_sec)
+    except (TypeError, ValueError):
+        duration = 0.0
+    if duration > 0:
+        summary["duration_sec"] = duration
+    return summary
 
 
 def analysis_line(summary: dict | None) -> str:
@@ -402,26 +428,46 @@ def _flash(message: str, *, error: bool = False) -> None:
 
 _TOKEN_MAP: dict[str, str] = {}
 
-_HOME_CARDS: tuple[dict[str, object], ...] = (
-    {
-        "id": "learn",
-        "title": "Learn a song",
-        "subtitle": "Stems, chords, sections, tab, and loops.",
-        "primary": True,
-    },
-    {
-        "id": "youtube",
-        "title": "Save from YouTube",
-        "subtitle": "Save audio to a folder you pick.",
-        "primary": False,
-    },
-    {
-        "id": "tab",
-        "title": "Tab PDF",
-        "subtitle": "A rough guitar tab from audio.",
-        "primary": False,
-    },
-)
+
+def clock_duration(raw: object) -> str:
+    """Clock label for a stored length. Missing or empty values stay blank."""
+    try:
+        seconds = float(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ""
+    if seconds != seconds or seconds <= 0:
+        return ""
+    total = int(round(seconds))
+    if total <= 0:
+        return ""
+    minutes, secs = divmod(total, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
+
+
+def existing_duration(row: dict, summary: dict | None) -> str:
+    """Song length already stored on the job or the analysis. Never probed."""
+    raw = row.get("audio_duration_sec")
+    if raw is None and isinstance(summary, dict):
+        raw = summary.get("duration_sec")
+    return clock_duration(raw)
+
+
+def existing_tempo(summary: dict | None) -> str:
+    """Detected BPM already on the analysis summary. Blank when it was not stored."""
+    if not isinstance(summary, dict):
+        return ""
+    try:
+        bpm = float(summary.get("bpm"))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return ""
+    if bpm != bpm or bpm <= 0:
+        return ""
+    if abs(bpm - round(bpm)) < 0.05:
+        return str(int(round(bpm)))
+    return f"{bpm:.1f}"
 
 
 def build_home_props(
@@ -449,6 +495,7 @@ def build_home_props(
             token = hashlib.sha256(f"{issued}\n{run_dir}".encode()).hexdigest()[:16]
             _TOKEN_MAP[token] = run_dir
             tokens_by_path[run_dir] = token
+        art = recent_art_url(row)
         public_rows.append(
             {
                 "token": token,
@@ -457,7 +504,10 @@ def build_home_props(
                 "subtitle": row_analysis_subtitle(summary, run_dir, analysis_status),
                 "state": row_analysis_state(summary, run_dir, analysis_status),
                 "age": relative_age(row.get("created_at")),
+                "duration": existing_duration(row, summary),
+                "tempo": existing_tempo(summary),
                 "action": "practice" if summary else "analyse",
+                "art": art,
             }
         )
     public_setlists: list[dict] = []
@@ -498,7 +548,7 @@ def build_home_props(
     return {
         "nonce": issued,
         "product": product,
-        "cards": [dict(card) for card in _HOME_CARDS],
+        "cards": [],
         "recents": public_rows[:6],
         "rows": public_rows,
         "trashed": public_trashed,
@@ -657,12 +707,10 @@ def _handle_home_event(event: dict, tokens: dict[str, str]) -> None:
         st.rerun()
         return
     if kind == "open_card":
+        # "Pick a local file" still opens Isolation. Page cards were removed;
+        # YouTube / Tab PDF live in the sidebar only.
         if ident == "learn":
             open_new_separation()
-        elif ident == "youtube":
-            _go("youtube_audio.py")
-        elif ident == "tab":
-            _go("tab_pdf.py")
         return
     run_dir = tokens.get(ident)
     if not run_dir:
@@ -768,109 +816,79 @@ def _main_legacy() -> None:
     owner = load_persist_isolate_user_id(st.session_state, DATA_DIR / ISOLATE_USER_ID_FILENAME)
     rows = library_rows(owner if isinstance(owner, str) else None)
 
-    with st.container(key="att_home"):
-        separate, youtube, tab_pdf = st.columns(3)
-        with separate:
-            if st.button(
-                "Learn a song",
-                key="home_open_isolate",
-                width="stretch",
-                help="Separate a song, then practise with chords, sections, tab, and loops",
-            ):
-                open_new_separation()
-            st.caption("Stems, chords, sections, tab, and slow-practice loops.")
-        with youtube:
-            if st.button(
-                "Save from YouTube",
-                key="home_open_youtube",
-                width="stretch",
-                help="Download a public video's audio to a folder. Does not separate stems.",
-            ):
-                _go("youtube_audio.py")
-            st.caption("MP3 or another format, saved to a folder you pick.")
-        with tab_pdf:
-            if st.button(
-                "Tab PDF",
-                key="home_open_tab",
-                width="stretch",
-                help="Demo transcription. Tabs are rough drafts.",
-            ):
-                _go("tab_pdf.py")
-            st.caption("A rough guitar tab from audio. Demo only.")
-
-        st.subheader("Recents")
-        if not rows:
-            st.info("No separations yet. Separate a song to see it here.")
-            if st.button("Separate a song", key="home_empty_separate"):
-                open_new_separation()
-        else:
-            recent = rows[:6]
-            cols = st.columns(len(recent))
-            for index, row in enumerate(recent):
-                run_dir = str(row.get("run_dir") or "")
-                age = relative_age(row.get("created_at"))
-                with cols[index]:
-                    if st.button(
-                        run_label(row),
-                        key=f"home_recent_{index}",
-                        width="stretch",
-                        help=age or "Open this mix",
-                    ):
-                        open_saved_run(run_dir)
-                    if age:
-                        st.caption(age)
-
-        st.subheader("Library")
-        query = st.text_input(
-            "Search library",
-            key="home_library_query",
-            placeholder="Search by name",
-            label_visibility="collapsed",
-        )
-        shown = [row for row in rows if _matches(row, str(query or ""))]
-        if rows and not shown:
-            st.caption("Nothing in the library matches that search.")
-        elif not rows:
-            st.caption("Finished separations show up here.")
-        else:
-            for index, row in enumerate(shown):
-                run_dir = str(row.get("run_dir") or "")
-                age = relative_age(row.get("created_at"))
-                label = run_label(row)
+    st.subheader("Recents")
+    if not rows:
+        st.info("No separations yet. Separate a song to see it here.")
+        if st.button("Separate a song", key="home_empty_separate"):
+            open_new_separation()
+    else:
+        recent = rows[:6]
+        cols = st.columns(len(recent))
+        for index, row in enumerate(recent):
+            run_dir = str(row.get("run_dir") or "")
+            age = relative_age(row.get("created_at"))
+            with cols[index]:
+                if st.button(
+                    run_label(row),
+                    key=f"home_recent_{index}",
+                    width="stretch",
+                    help=age or "Open this mix",
+                ):
+                    open_saved_run(run_dir)
                 if age:
-                    label = f"{label}  ·  {age}"
-                summary = analysis_summary(row)
-                open_col, action_col = st.columns([6, 1], gap="small")
-                with open_col:
-                    if st.button(label, key=f"home_file_{index}", width="stretch"):
-                        open_saved_run(run_dir)
-                    st.caption(analysis_line(summary))
-                with action_col:
-                    if summary:
-                        if st.button(
-                            "Practice",
-                            key=f"home_practice_{index}",
-                            width="stretch",
-                            help="Open the mixer with chords, sections, lyrics, and tab.",
-                        ):
-                            open_practice_run(run_dir)
-                    else:
-                        if st.button(
-                            "Analyse",
-                            key=f"home_analyse_{index}",
-                            width="stretch",
-                            help="Build chords, sections, lyrics, key, and BPM for this run.",
-                        ):
-                            from ui.isolate_jobs import analyse_existing_run
+                    st.caption(age)
 
-                            with st.spinner("Analysing song…"):
-                                ok, message = analyse_existing_run(run_dir)
-                            _flash(
-                                message,
-                                error=not ok
-                                or message.startswith("Analysis ready with warnings"),
-                            )
-                            st.rerun()
+    st.subheader("Library")
+    query = st.text_input(
+        "Search library",
+        key="home_library_query",
+        placeholder="Search by name",
+        label_visibility="collapsed",
+    )
+    shown = [row for row in rows if _matches(row, str(query or ""))]
+    if rows and not shown:
+        st.caption("Nothing in the library matches that search.")
+    elif not rows:
+        st.caption("Finished separations show up here.")
+    else:
+        for index, row in enumerate(shown):
+            run_dir = str(row.get("run_dir") or "")
+            age = relative_age(row.get("created_at"))
+            label = run_label(row)
+            if age:
+                label = f"{label}  ·  {age}"
+            summary = analysis_summary(row)
+            open_col, action_col = st.columns([6, 1], gap="small")
+            with open_col:
+                if st.button(label, key=f"home_file_{index}", width="stretch"):
+                    open_saved_run(run_dir)
+                st.caption(analysis_line(summary))
+            with action_col:
+                if summary:
+                    if st.button(
+                        "Practice",
+                        key=f"home_practice_{index}",
+                        width="stretch",
+                        help="Open the mixer with chords, sections, lyrics, and tab.",
+                    ):
+                        open_practice_run(run_dir)
+                else:
+                    if st.button(
+                        "Analyse",
+                        key=f"home_analyse_{index}",
+                        width="stretch",
+                        help="Build chords, sections, lyrics, key, and BPM for this run.",
+                    ):
+                        from ui.isolate_jobs import analyse_existing_run
+
+                        with st.spinner("Analysing song…"):
+                            ok, message = analyse_existing_run(run_dir)
+                        _flash(
+                            message,
+                            error=not ok
+                            or message.startswith("Analysis ready with warnings"),
+                        )
+                        st.rerun()
 
 
 def main() -> None:

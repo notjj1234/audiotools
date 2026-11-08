@@ -39,3 +39,20 @@ def test_home_package_has_no_extra_runtime_deps():
     assert "streamlit-component-lib" in text
     assert '"vite"' in text
     assert "react" not in text.lower()
+
+
+def test_home_recents_art_youtube_thumb_or_token_motif():
+    """YouTube rows may use i.ytimg.com; file rows use the token motif. No paths."""
+    root = Path(__file__).resolve().parents[1] / "ui" / "home_component" / "frontend"
+    src = (root / "src" / "main.ts").read_text(encoding="utf-8")
+    assert "function recentArt(" in src
+    assert "function hashToken(" in src
+    assert "function safeYoutubeArtUrl(" in src
+    assert "art-signal" in src
+    assert "art-thumb" in src
+    assert "i.ytimg.com" in src
+    assert 'src = "file://' not in src
+    assert "run_dir" not in src
+    css = (root / "src" / "style.css").read_text(encoding="utf-8")
+    assert ".art-signal" in css
+    assert ".art-thumb" in css

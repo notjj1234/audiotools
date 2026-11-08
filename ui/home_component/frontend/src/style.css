@@ -47,15 +47,23 @@ button, input { font-family: inherit; }
   height: 100%;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   min-height: 0;
-  padding: 24px 20px 0 33px;
+  padding: 0;
   background: var(--home-bg);
 }
 
-/* 1124px is the outer viewport. This frame sits beside a 240px rail, so the
-   switch is 884px here (1124 - 240). */
-@media (max-width: 884px) {
-  .home { padding-left: 13px; }
+.home-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 24px 20px 0 20px;
+}
+
+@media (max-width: 720px) {
+  .home-main { padding-left: 13px; padding-right: 13px; }
   .files-scroll { margin-left: 0; width: 100%; }
 }
 
@@ -211,10 +219,50 @@ h2 {
 }
 
 .recent .art {
+  display: block;
+  position: relative;
   width: 150px;
   height: 150px;
   background: var(--home-art);
   border-radius: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.recent .art .art-signal {
+  display: block;
+  width: 150px;
+  height: 150px;
+  /* Keep the motif quieter than title/meta. */
+  opacity: 0.88;
+}
+
+.recent .art .art-thumb {
+  display: block;
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  object-position: center;
+  /* Slightly quiet so the card chrome still leads. */
+  opacity: 0.92;
+}
+
+.recent .art.has-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 55%,
+    color-mix(in srgb, var(--home-art) 35%, transparent)
+  );
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recent .art .art-signal {
+    transition: none;
+  }
 }
 
 .recent .title {
@@ -387,7 +435,35 @@ th, td {
 th { font-weight: 400; }
 
 .col-created { width: 116px; }
+.col-duration, .col-tempo { width: 88px; }
 .col-action { width: 48px; padding-right: 8px; }
+
+.sort-head,
+.add-file {
+  font: inherit;
+  cursor: pointer;
+}
+
+.sort-head {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+.add-file {
+  height: 32px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: var(--home-selected);
+  color: var(--home-bg);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 .col-check { width: 36px; padding-right: 0; }
 .col-check input {
   width: 16px;
@@ -490,9 +566,11 @@ tr:hover td { background: var(--home-card); }
 
 .menu button:hover { background: var(--home-wash-hover); }
 
-.card:hover, .recent:hover, .icon-btn:hover, .scroll:hover {
+.card:hover, .recent:hover, .icon-btn:hover, .scroll:hover, .add-file:hover {
   background: var(--home-wash-hover);
 }
+
+.add-file:hover { color: var(--home-text); }
 
 .card:active, .recent:active, .icon-btn:active, .row-open:active {
   background: var(--home-wash-hover);

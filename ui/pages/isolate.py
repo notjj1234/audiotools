@@ -93,8 +93,12 @@ from ui.isolate_state import (
     DEMUCS_STEM_CHECKBOX_IDS,
     DISMISSED_JOB_IDS_KEY,
     GUITAR_TRACK_OPTION_IDS,
+    ISOLATE_BATCH_FP_KEY,
+    ISOLATE_BATCH_PATHS_KEY,
     ISOLATE_EXPORT_DIR_KEY,
+    ISOLATE_OUTPUT_NAME_PENDING_KEY,
     ISOLATE_UI_STATE_FILENAME,
+    ISOLATE_YOUTUBE_URL_PENDING_KEY,
     ISOLATE_USER_ID_FILENAME,
     OPEN_MIX_TABS_KEY,
     ISOLATE_SKIP_REHYDRATE_KEY,
@@ -105,6 +109,7 @@ from ui.isolate_state import (
     apply_shell_view,
     clamp_pan,
     close_open_mix_tab,
+    current_setup_step,
     draft_tab_job_overlays,
     mix_tab_event_index,
     mixer_focus_run_dir,
@@ -216,7 +221,11 @@ from ui.isolate_state import (
     running_progress_view,
     refresh_open_mix_action,
     select_rehydrate_row,
+    SETUP_STEP_KEY,
+    SETUP_STEP_SEPARATE,
+    SETUP_STEP_SOURCE,
     session_mixer_artifacts_ok,
+    setup_continue_enabled,
     should_hide_stale_results,
     should_show_failed_job,
     staged_audio_for_new_tab,
@@ -254,7 +263,6 @@ from ui.project import (
 )
 from ui.stem_mixer_component import component_build_available, stem_mixer
 from ui.youtube_search import (
-    PAGE_SIZE as YT_SEARCH_PAGE_SIZE,
     has_next_page,
     hits_as_dicts,
     meta_line,
@@ -362,6 +370,7 @@ ISOLATE_YOUTUBE_SEARCH_HITS_KEY = "isolate_youtube_search_hits"
 ISOLATE_YOUTUBE_SEARCH_ERROR_KEY = "isolate_youtube_search_error"
 ISOLATE_YOUTUBE_SEARCH_PAGE_KEY = "isolate_youtube_search_page"
 ISOLATE_YOUTUBE_SEARCH_QUERY_KEY = "isolate_youtube_search_query"
+ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE = 9
 ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY = "isolate_youtube_auto_download"
 ISOLATE_YOUTUBE_DOWNLOADING_KEY = "_isolate_youtube_downloading"
 LITE_GUITAR_FELL_BACK_KEY = "_isolate_lite_guitar_fell_back"
@@ -387,8 +396,8 @@ def _run_youtube_search(query: str, *, page: int) -> None:
         with st.spinner("Searching YouTube…"):
             hits = search_youtube_videos(
                 query,
-                max_results=YT_SEARCH_PAGE_SIZE,
-                offset=page_offset(page),
+                max_results=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
+                offset=page_offset(page, page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE),
             )
         st.session_state[ISOLATE_YOUTUBE_SEARCH_HITS_KEY] = hits_as_dicts(hits)
         st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
@@ -526,84 +535,78 @@ def _youtube_search_dialog() -> None:
         hits_state = []
     busy = bool(downloading_title)
     if hits_state:
-        st.caption(result_range_caption(page, len(hits_state)))
-        for hit in hits_state:
-            if not isinstance(hit, dict):
-                continue
-            vid = str(hit.get("video_id") or "")
-            title = str(hit.get("title") or "Untitled")
-            dur = format_youtube_duration(hit.get("duration_sec"))
-            url = str(hit.get("url") or "").strip()
-            thumb = str(hit.get("thumbnail_url") or "").strip()
-            meta = meta_line(hit, duration_label=dur)
-            row = st.columns([1.5, 3.2, 1.3], vertical_alignment="center")
-            with row[0]:
-                if thumb:
-                    st.image(thumb, width=168)
-            with row[1]:
-                st.markdown(f"**{title}**")
-                if meta:
-                    st.caption(meta)
-            with row[2]:
-                if st.button(
-                    "Use",
-                    key=f"isolate_youtube_pick_p{page}_{vid}",
-                    type="primary",
-                    disabled=not url or busy,
-                    width="stretch",
-                    help="Download this track’s audio into New.",
-                ):
-                    queue_youtube_url(st.session_state, url, title=title)
-                    st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
-                    # Download in the dialog so Use shows progress instead of
-                    # closing first and leaving a blank gap.
-                    err = _download_youtube_with_status(url, title=title)
-                    if err:
-                        st.session_state[ISOLATE_YOUTUBE_SEARCH_ERROR_KEY] = err
-                        st.rerun()
-                    _close_youtube_search_dialog()
-                    st.session_state.pop(ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY, None)
-                    st.session_state["isolate_flash"] = (
-                        f"Downloaded **{title}**. Pick a section or separate tracks."
-                    )
-                    st.rerun()
-                if st.button(
-                    "Separate",
-                    key=f"isolate_youtube_separate_p{page}_{vid}",
-                    type="secondary",
-                    disabled=not url or busy,
-                    width="stretch",
-                    help="Download this track and queue the outcome already chosen on Home.",
-                ):
-                    queue_youtube_url(st.session_state, url, title=title)
-                    st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
-                    err = _download_youtube_with_status(url, title=title)
-                    if err:
-                        st.session_state[ISOLATE_YOUTUBE_SEARCH_ERROR_KEY] = err
-                        st.rerun()
-                    _close_youtube_search_dialog()
-                    st.session_state.pop(ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY, None)
-                    st.session_state["isolate_search_enqueue"] = True
-                    st.rerun()
-            with st.expander(
-                "Preview",
-                expanded=False,
-                key=f"isolate_youtube_preview_p{page}_{vid}",
-            ):
-                if url:
-                    # Avoid Streamlit's YouTube iframe embed: many official/label
-                    # uploads refuse youtube.com/embed ("unavailable") even though
-                    # search metadata and yt-dlp download still work.
+        st.caption(
+            result_range_caption(
+                page,
+                len(hits_state),
+                page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
+            )
+        )
+        hits_for_grid = [hit for hit in hits_state if isinstance(hit, dict)][
+            :ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE
+        ]
+        for row_index in range(3):
+            grid_row = st.columns(3)
+            for col_index in range(3):
+                with grid_row[col_index]:
+                    slot = row_index * 3 + col_index
+                    if slot >= len(hits_for_grid):
+                        continue
+                    hit = hits_for_grid[slot]
+                    vid = str(hit.get("video_id") or "")
+                    title = str(hit.get("title") or "Untitled")
+                    dur = format_youtube_duration(hit.get("duration_sec"))
+                    url = str(hit.get("url") or "").strip()
+                    thumb = str(hit.get("thumbnail_url") or "").strip()
+                    meta = meta_line(hit, duration_label=dur)
                     if thumb:
                         st.image(thumb, use_container_width=True)
-                    st.caption(
-                        "In-app YouTube playback is often blocked for official music "
-                        "uploads. Open the video on YouTube, or click **Use** to "
-                        "download and preview it in the app."
-                    )
-                    st.markdown(f"[Open on YouTube]({url})")
-                else:
-                    st.caption("No preview URL for this result.")
+                    st.markdown(f"**{title}**")
+                    if meta:
+                        st.caption(meta)
+                    if st.button(
+                        "Use",
+                        key=f"isolate_youtube_pick_p{page}_{vid}",
+                        type="primary",
+                        disabled=not url or busy,
+                        width="stretch",
+                        help="Download this track’s audio into New.",
+                    ):
+                        queue_youtube_url(st.session_state, url, title=title)
+                        st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
+                        # Download in the dialog so Use shows progress instead of
+                        # closing first and leaving a blank gap.
+                        err = _download_youtube_with_status(url, title=title)
+                        if err:
+                            st.session_state[ISOLATE_YOUTUBE_SEARCH_ERROR_KEY] = err
+                            st.rerun()
+                        st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SEPARATE
+                        _close_youtube_search_dialog()
+                        st.session_state.pop(ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY, None)
+                        st.session_state["isolate_flash"] = (
+                            f"Downloaded **{title}**. Pick a section or separate tracks."
+                        )
+                        st.rerun()
+                    if st.button(
+                        "Separate",
+                        key=f"isolate_youtube_separate_p{page}_{vid}",
+                        type="secondary",
+                        disabled=not url or busy,
+                        width="stretch",
+                        help="Download this track and queue the outcome already chosen on Home.",
+                    ):
+                        queue_youtube_url(st.session_state, url, title=title)
+                        st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
+                        err = _download_youtube_with_status(url, title=title)
+                        if err:
+                            st.session_state[ISOLATE_YOUTUBE_SEARCH_ERROR_KEY] = err
+                            st.rerun()
+                        _close_youtube_search_dialog()
+                        st.session_state.pop(ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY, None)
+                        st.session_state["isolate_search_enqueue"] = True
+                        st.rerun()
+                    if url:
+                        st.markdown(f"[Open on YouTube]({url})")
     if hits_state or page > 1:
         nav = st.columns([1, 2, 1], vertical_alignment="center")
         with nav[0]:
@@ -620,13 +623,20 @@ def _youtube_search_dialog() -> None:
                 )
                 st.rerun()
         with nav[1]:
-            st.caption(result_range_caption(page, len(hits_state)))
+            st.caption(
+                result_range_caption(
+                    page,
+                    len(hits_state),
+                    page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
+                )
+            )
         with nav[2]:
             if st.button(
                 "Next",
                 key="isolate_youtube_search_next",
                 type="secondary",
-                disabled=not has_next_page(len(hits_state)) or busy,
+                disabled=not has_next_page(len(hits_state), page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE)
+                or busy,
                 width="stretch",
             ):
                 _run_youtube_search(
@@ -2569,165 +2579,346 @@ def _persist_kwargs() -> dict:
     return {}
 
 
+def _park_unmounted_widget(drew: bool, widget_key: str, pending_key: str) -> None:
+    """Keep a text widget across a screen that does not instantiate it.
+
+    Skip when this run already queued a pending value (search pick or reset).
+    """
+    if drew or pending_key in st.session_state:
+        return
+    if widget_key not in st.session_state:
+        return
+    st.session_state[pending_key] = st.session_state.get(widget_key)
+
+
+def _batch_path_strings() -> list[str]:
+    raw = st.session_state.get(ISOLATE_BATCH_PATHS_KEY) or []
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw if str(item)]
+
+
+def _stored_batch_paths() -> list[Path]:
+    return [Path(item) for item in _batch_path_strings() if Path(item).is_file()]
+
+
+def _render_batch_caption(count: int) -> None:
+    if count <= 1:
+        return
+    extra = count - 20
+    if extra == 1:
+        st.caption(
+            f"{count} files selected. The first 20 will be queued. 1 file was left out."
+        )
+    elif extra > 1:
+        st.caption(
+            f"{count} files selected. The first 20 will be queued. {extra} files were left out."
+        )
+    else:
+        st.caption(
+            f"{count} files selected. Each file is queued with the same tracks and speed."
+        )
+
+
+def _remember_batch_uploads(uploads: list) -> None:
+    """Copy a multi-file selection before the uploader unmounts.
+
+    An empty uploader is not a clear: Back remounts it with no files.
+    One new file replaces the batch. ``save_upload`` makes a new directory
+    on every call, so the same fingerprint is not staged again.
+    """
+    if len(uploads) == 1:
+        st.session_state.pop(ISOLATE_BATCH_PATHS_KEY, None)
+        st.session_state.pop(ISOLATE_BATCH_FP_KEY, None)
+        return
+    if len(uploads) < 2:
+        return
+    fp = "|".join(upload_fingerprint(item) or "" for item in uploads)
+    stored = _batch_path_strings()
+    if fp == st.session_state.get(ISOLATE_BATCH_FP_KEY) and len(stored) > 1:
+        return
+    paths: list[str] = []
+    notes: list[str] = []
+    for item in uploads:
+        path, err = _stage_batch_upload(item)
+        if err or path is None:
+            notes.append(err or f"Could not read {getattr(item, 'name', 'file')}.")
+            continue
+        paths.append(str(path))
+    st.session_state[ISOLATE_BATCH_PATHS_KEY] = paths
+    st.session_state[ISOLATE_BATCH_FP_KEY] = fp
+    if notes:
+        st.warning(" ".join(notes))
+
+
+def _region_bounds_from_session(audio_path: Path | None) -> tuple[float, float | None, str | None]:
+    """Region already stored for this file, without drawing the picker.
+
+    Missing tuple means the whole file. Does not create a region key.
+    """
+    if audio_path is None or not audio_path.exists():
+        return 0.0, None, None
+    duration = _cached_probe_duration_sec(audio_path)
+    if duration is None:
+        return 0.0, None, None
+    fp = st.session_state.get("isolate_pending_fp") or st.session_state.get(
+        "isolate_upload_fp", "none"
+    )
+    stored = st.session_state.get(f"isolate_region_{fp}")
+    if not isinstance(stored, tuple) or len(stored) != 2:
+        return 0.0, None, None
+    start_sec, end_sec = clamp_region_bounds(
+        stored[0], stored[1], duration, min_length=MIN_REGION_SEC
+    )
+    length = end_sec - start_sec
+    region_label = format_region_label(start_sec, length)
+    if length < MIN_REGION_SEC:
+        return start_sec, None, region_label
+    if start_sec <= 0.5 and end_sec >= duration - 0.5:
+        return 0.0, None, None
+    return start_sec, length, region_label
+
+
+def _separation_choice_from_session(
+    *,
+    prefer_roformer: bool,
+    effective_sec: float | None,
+    cap_sec: float,
+    duration_known: bool,
+) -> tuple[list[str], dict, str | None]:
+    """Track choice for screen 1, including Search → Separate.
+
+    Same session writes as the outcome picker before it paints. Does not
+    draw widgets and does not assign the Run-on radio key.
+    """
+    roformer_ok = is_roformer_backend_available()
+    pro = is_pro_mode(st.session_state)
+    guitar_option: str | None = None
+    if not pro:
+        guitar_option, fell_back = resolve_lite_guitar_engine(
+            st.session_state.get(LITE_GUITAR_ENGINE_KEY),
+            effective_sec=effective_sec,
+            cap_sec=cap_sec,
+            duration_known=duration_known,
+            roformer_available=roformer_ok,
+        )
+        st.session_state[LITE_GUITAR_ENGINE_KEY] = guitar_option
+        if fell_back:
+            st.session_state[LITE_GUITAR_FELL_BACK_KEY] = True
+        elif lite_guitar_engine_allowed(
+            "guitar_roformer",
+            effective_sec=effective_sec,
+            cap_sec=cap_sec,
+            duration_known=duration_known,
+            roformer_available=roformer_ok,
+        ):
+            st.session_state.pop(LITE_GUITAR_FELL_BACK_KEY, None)
+    _init_track_picker_session(prefer_roformer=prefer_roformer)
+    option_ids = _collect_track_options_from_session()
+    matched = outcome_card_for_options(
+        option_ids,
+        roformer_available=roformer_ok,
+        prefer_roformer=prefer_roformer,
+        guitar_option=guitar_option,
+    )
+    if matched:
+        st.session_state[OUTCOME_CARD_KEY] = matched
+    else:
+        st.session_state[OUTCOME_CARD_KEY] = CUSTOM_OUTCOME_CARD
+    selected = str(st.session_state.get(OUTCOME_CARD_KEY) or DEFAULT_OUTCOME_CARD)
+    if not pro:
+        if selected in OUTCOME_CARDS:
+            option_ids = resolve_outcome_card(
+                selected,
+                roformer_available=roformer_ok,
+                prefer_roformer=prefer_roformer,
+                guitar_option=guitar_option,
+            )
+            _sync_track_widgets_from_options(option_ids)
+            st.session_state[OUTCOME_CARD_KEY] = selected
+        else:
+            option_ids = apply_lite_guitar_engine(
+                option_ids, guitar_option or DEFAULT_LITE_GUITAR_ENGINE
+            )
+            _sync_track_widgets_from_options(option_ids)
+            matched = outcome_card_for_options(
+                option_ids,
+                roformer_available=roformer_ok,
+                prefer_roformer=prefer_roformer,
+                guitar_option=guitar_option,
+            )
+            st.session_state[OUTCOME_CARD_KEY] = matched or CUSTOM_OUTCOME_CARD
+    preset_error: str | None = None
+    try:
+        resolved = resolve_track_selection(option_ids)
+    except ValueError as exc:
+        preset_error = str(exc)
+        resolved = resolve_track_selection(list(DEFAULT_TRACK_OPTIONS))
+    return list(option_ids), resolved, preset_error
+
+
 def _render_separation_controls() -> dict:
-    """New tab: source, tracks, speed, Advanced, section preview."""
+    """New tab: source screen, then separate screen."""
     apply_pending_output_name(st.session_state)
     apply_pending_youtube_url(st.session_state)
     apply_youtube_output_name_sync(st.session_state)
     if st.session_state.get("isolate_speed_preset") not in SPEED_PRESETS:
         st.session_state["isolate_speed_preset"] = DEFAULT_SPEED_PRESET
     persist = _persist_kwargs()
-
-    uploaded_raw = st.file_uploader(
-        "Upload audio or video",
-        type=_HOME_UPLOAD_TYPES,
-        accept_multiple_files=True,
-        help="MP3, WAV, FLAC, M4A, MP4, MOV, WEBM, or MKV. Video audio is extracted on this computer. Several files are queued one at a time.",
-        key=f"isolate_upload_{st.session_state.get('isolate_upload_key', 0)}",
-    )
-    uploads = list(uploaded_raw) if isinstance(uploaded_raw, list) else []
-    single = uploads[0] if len(uploads) == 1 else None
-    uploaded = uploads if len(uploads) > 1 else single
-    if len(uploads) > 1:
-        extra = len(uploads) - 20
-        if extra == 1:
-            st.caption(
-                f"{len(uploads)} files selected. The first 20 will be queued. 1 file was left out."
-            )
-        elif extra > 1:
-            st.caption(
-                f"{len(uploads)} files selected. The first 20 will be queued. {extra} files were left out."
-            )
-        else:
-            st.caption(
-                f"{len(uploads)} files selected. Each file is queued with the same tracks and speed."
-            )
-    elif single is not None:
-        _sync_upload_output_name(single)
-        _ensure_pending_audio(single)
-
+    step = current_setup_step(st.session_state)
+    drew_youtube = False
+    drew_output_name = False
+    uploads: list = []
+    single = None
     youtube_error: str | None = None
-    url_row = st.columns([4, 1], vertical_alignment="bottom")
-    with url_row[0]:
-        youtube_url = st.text_input(
-            "Or paste a YouTube URL",
-            key="isolate_youtube_url",
-            **persist,
-        )
-    with url_row[1]:
-        if st.button(
-            "Search",
-            key="isolate_youtube_search_open_btn",
-            type="secondary",
-            width="stretch",
-            help="Open a search panel to find a public video by song or artist.",
-        ):
-            st.session_state[ISOLATE_YOUTUBE_SEARCH_OPEN_KEY] = True
-            st.rerun()
-    if st.session_state.get(ISOLATE_YOUTUBE_SEARCH_OPEN_KEY):
-        _youtube_search_dialog()
-    st.caption(YOUTUBE_DISCLAIMER)
-    # st.caption(
-    #     "Off until you paste a URL or search. Enable only if you have rights."
-    # )
-    url_ready = youtube_url.strip()
-    if url_ready and not is_youtube_url(url_ready) and not is_direct_media_url(url_ready):
-        youtube_error = "Paste a YouTube link or a direct audio or video file link."
-        st.error(youtube_error)
-    elif url_ready and is_youtube_url(url_ready):
-        pending = st.session_state.get("isolate_pending_audio_path")
-        pending_fp = st.session_state.get("isolate_pending_fp")
-        already_ready = (
-            pending
-            and Path(pending).exists()
-            and isinstance(pending_fp, str)
-            and pending_fp == f"youtube:{url_ready}"
-        )
-        auto_download = bool(st.session_state.pop(ISOLATE_YOUTUBE_AUTO_DOWNLOAD_KEY, False))
-        download_title = (
-            str(st.session_state.get("isolate_output_name") or "").strip()
-            or Path(url_ready.rstrip("/")).name
-            or "YouTube audio"
-        )
-        if auto_download and not already_ready:
-            err = _download_youtube_with_status(url_ready, title=download_title)
-            if err:
-                youtube_error = err
-                st.error(youtube_error)
-            else:
-                already_ready = True
-                st.rerun()
-        elif st.button(
-            "Download audio",
-            key="isolate_youtube_download",
-            help=(
-                "Fetch the audio now so you can preview a section or separate "
-                "the whole track. Search → Use downloads automatically."
-            ),
-            disabled=bool(already_ready)
-            or bool(st.session_state.get(ISOLATE_YOUTUBE_DOWNLOADING_KEY)),
-        ):
-            err = _download_youtube_with_status(url_ready, title=download_title)
-            if err:
-                youtube_error = err
-                st.error(youtube_error)
-            else:
-                st.session_state["isolate_flash"] = (
-                    f"Downloaded **{download_title}**. Pick a section or separate tracks."
-                )
-                st.rerun()
-        if st.session_state.get(ISOLATE_YOUTUBE_DOWNLOADING_KEY):
-            st.info(
-                f"Downloading **{st.session_state[ISOLATE_YOUTUBE_DOWNLOADING_KEY]}**…"
-            )
-        if already_ready and is_pro_mode(st.session_state):
-            pending = st.session_state.get("isolate_pending_audio_path")
-            if pending and Path(pending).exists():
-                st.caption(f"Ready: **{Path(pending).stem}**")
-                st.caption(
-                    "Choose a **Section** below, or leave it at the full file. "
-                    "On Lite, long songs use a lot of RAM. Safer: first 90 s is optional."
-                )
+    youtube_url = str(st.session_state.get("isolate_youtube_url") or "")
+    default_name = ""
 
-    carry_over_path = st.session_state.get("carry_over_audio_path")
-    carry_over_name = st.session_state.get("carry_over_audio_name")
-    if not single and len(uploads) <= 1 and carry_over_path and Path(carry_over_path).exists():
-        st.caption(
-            f"Using carried-over audio: **{carry_over_name}**. "
-            "Upload a file above to use something else instead."
-        )
-    default_name = Path(single.name).stem if single else Path(carry_over_name or "").stem
+    if step == SETUP_STEP_SOURCE:
+        with st.container(key="isolate_source_entry"):
+            uploaded_raw = st.file_uploader(
+                "Upload audio or video",
+                type=_HOME_UPLOAD_TYPES,
+                accept_multiple_files=True,
+                help="MP3, WAV, FLAC, M4A, MP4, MOV, WEBM, or MKV. Video audio is extracted on this computer. Several files are queued one at a time.",
+                key=f"isolate_upload_{st.session_state.get('isolate_upload_key', 0)}",
+            )
+            uploads = list(uploaded_raw) if isinstance(uploaded_raw, list) else []
+            single = uploads[0] if len(uploads) == 1 else None
+            _remember_batch_uploads(uploads)
+            batch_count = len(uploads) if len(uploads) > 1 else (
+                len(_batch_path_strings()) if not uploads else 0
+            )
+            _render_batch_caption(batch_count)
+            if single is not None:
+                _sync_upload_output_name(single)
+                _ensure_pending_audio(single)
+
+            if st.button(
+                "Search YouTube",
+                key="isolate_youtube_search_open_btn",
+                type="secondary",
+                width="stretch",
+                help="Open a search panel to find a public video by song or artist.",
+            ):
+                st.session_state[ISOLATE_YOUTUBE_SEARCH_OPEN_KEY] = True
+                st.rerun()
+            if st.session_state.get(ISOLATE_YOUTUBE_SEARCH_OPEN_KEY):
+                _youtube_search_dialog()
+            st.caption(YOUTUBE_DISCLAIMER)
+
+            carry_over_path = st.session_state.get("carry_over_audio_path")
+            carry_over_name = st.session_state.get("carry_over_audio_name")
+            if not single and len(uploads) <= 1 and carry_over_path and Path(carry_over_path).exists():
+                st.caption(
+                    f"Using carried-over audio: **{carry_over_name}**. "
+                    "Upload a file above to use something else instead."
+                )
+            pending_path = st.session_state.get("isolate_pending_audio_path")
+            pending_ready = bool(pending_path and Path(str(pending_path)).exists()) or bool(
+                carry_over_path and Path(str(carry_over_path)).exists()
+            )
+            continue_ok = setup_continue_enabled(
+                download_in_progress=bool(st.session_state.get(ISOLATE_YOUTUBE_DOWNLOADING_KEY)),
+                batch_count=len(_stored_batch_paths()),
+                live_upload_count=len(uploads),
+                youtube_url=youtube_url,
+                pending_fp=(
+                    str(st.session_state.get("isolate_pending_fp"))
+                    if st.session_state.get("isolate_pending_fp")
+                    else None
+                ),
+                pending_ready=pending_ready,
+            )
+            if st.button(
+                "Continue",
+                type="primary",
+                key="isolate_setup_continue",
+                disabled=not continue_ok,
+            ):
+                direct_url = youtube_url.strip()
+                if len(uploads) > 1 and len(_stored_batch_paths()) < 2:
+                    st.error("Could not queue these files.")
+                elif direct_url and is_direct_media_url(direct_url):
+                    saved, direct_err = _resolve_audio_for_job(
+                        {
+                            "youtube_url": direct_url,
+                            "uploaded": None,
+                            "output_name": st.session_state.get("isolate_output_name") or "",
+                            "audio_path": None,
+                        }
+                    )
+                    if direct_err or saved is None:
+                        st.error(direct_err or "Could not save that link.")
+                    else:
+                        st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SEPARATE
+                        _rerun_scroll_top()
+                else:
+                    st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SEPARATE
+                    _rerun_scroll_top()
+
+    batch_paths = _stored_batch_paths()
+    is_batch = len(batch_paths) > 1 or len(uploads) > 1
+    uploaded = uploads if len(uploads) > 1 else single
+    audio_path = None if is_batch else _active_source_path(single)
+    carry_name = st.session_state.get("carry_over_audio_name")
+    if single is not None:
+        default_name = Path(single.name).stem
+    elif carry_name:
+        default_name = Path(str(carry_name)).stem
     if default_name and not st.session_state.get("isolate_output_name"):
         st.session_state["isolate_output_name"] = default_name
-
-    audio_path = _active_source_path(single)
-
-    st.text_input(
-        "Output name",
-        help="Used for downloaded file names. Defaults to the uploaded file's name.",
-        key="isolate_output_name",
-        max_chars=100,
-        **persist,
-    )
-    staged_name = st.session_state.get("isolate_output_name")
-    if staged_name:
-        sanitized_name = " ".join(staged_name.split())
-        if sanitized_name != staged_name:
-            st.caption(f"Will be saved as: **{sanitized_name}**")
+    if step == SETUP_STEP_SEPARATE and not is_batch:
+        st.text_input(
+            "Output name",
+            help="Used for downloaded file names. Defaults to the uploaded file's name.",
+            key="isolate_output_name",
+            max_chars=100,
+            **persist,
+        )
+        drew_output_name = True
+        staged_name = st.session_state.get("isolate_output_name")
+        if staged_name:
+            sanitized_name = " ".join(str(staged_name).split())
+            if sanitized_name != staged_name:
+                st.caption(f"Will be saved as: **{sanitized_name}**")
 
     pro = is_pro_mode(st.session_state)
     # Full torch probe for Lite auto (MPS/CUDA) — without_torch would hide MPS.
     probe = get_desktop_probe()
     cap_sec = roformer_max_audio_sec(probe)
     prefer_roformer = True if pro else False
-    start_sec, max_duration_sec, region_label, track_options, resolved, preset_error = (
-        _render_section_and_outcomes(
-            audio_path=audio_path,
-            persist=persist,
-            prefer_roformer=prefer_roformer,
-            cap_sec=cap_sec,
+    if step == SETUP_STEP_SEPARATE:
+        start_sec, max_duration_sec, region_label, track_options, resolved, preset_error = (
+            _render_section_and_outcomes(
+                audio_path=None if is_batch else audio_path,
+                persist=persist,
+                prefer_roformer=prefer_roformer,
+                cap_sec=cap_sec,
+            )
         )
-    )
+    else:
+        if is_batch:
+            start_sec, max_duration_sec, region_label = 0.0, None, None
+            effective_sec = None
+        else:
+            start_sec, max_duration_sec, region_label = _region_bounds_from_session(audio_path)
+            file_dur = (
+                _cached_probe_duration_sec(audio_path)
+                if audio_path is not None and audio_path.exists()
+                else None
+            )
+            effective_sec = effective_clip_seconds(
+                file_duration_sec=file_dur,
+                start_sec=start_sec,
+                max_duration_sec=max_duration_sec,
+            )
+        track_options, resolved, preset_error = _separation_choice_from_session(
+            prefer_roformer=prefer_roformer,
+            effective_sec=effective_sec,
+            cap_sec=cap_sec,
+            duration_known=effective_sec is not None,
+        )
     custom_stems = list(resolved.get("stems") or [])
 
     speed_id = st.session_state.get("isolate_speed_preset")
@@ -2787,6 +2978,17 @@ def _render_separation_controls() -> dict:
         fold_other_mode=str(resolved.get("fold_other_mode") or "best_effort"),
         roformer_available=is_roformer_backend_available(),
     )
+    _park_unmounted_widget(drew_youtube, "isolate_youtube_url", ISOLATE_YOUTUBE_URL_PENDING_KEY)
+    _park_unmounted_widget(
+        drew_output_name, "isolate_output_name", ISOLATE_OUTPUT_NAME_PENDING_KEY
+    )
+    if step == SETUP_STEP_SEPARATE and st.button(
+        "Back",
+        key="isolate_setup_back",
+        type="secondary",
+    ):
+        st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SOURCE
+        _rerun_scroll_top()
     return {
         "model": engine_fields["model"],
         "two_stems": resolved["two_stems"],
@@ -4785,8 +4987,16 @@ def _spec_for_batch_file(choice: dict, audio_path: Path) -> IsolateJobSpec:
     )
 
 
-def _enqueue_upload_batch(choice: dict, uploads: list) -> None:
-    """Queue several local files. The serial worker runs the oldest first."""
+def _enqueue_upload_batch(
+    choice: dict,
+    uploads: list,
+    staged_paths: list[Path] | None = None,
+) -> None:
+    """Queue several local files. The serial worker runs the oldest first.
+
+    ``staged_paths`` is set when screen 1 already copied the uploader. Passing
+    it skips ``_stage_batch_upload`` so the same files are not saved twice.
+    """
     section_selected = (
         choice.get("max_duration_sec") is not None
         or bool(choice.get("region_label"))
@@ -4824,11 +5034,17 @@ def _enqueue_upload_batch(choice: dict, uploads: list) -> None:
     cap_sec = roformer_max_audio_sec(probe)
     staged: list[Path] = []
     notes: list[str] = []
-    for item in uploads:
-        path, err = _stage_batch_upload(item)
-        if err or path is None:
-            notes.append(err or f"Could not read {getattr(item, 'name', 'file')}.")
-            continue
+    incoming: list[Path] = []
+    if staged_paths is None:
+        for item in uploads:
+            path, err = _stage_batch_upload(item)
+            if err or path is None:
+                notes.append(err or f"Could not read {getattr(item, 'name', 'file')}.")
+                continue
+            incoming.append(path)
+    else:
+        incoming = list(staged_paths)
+    for path in incoming:
         if not is_pro_mode(st.session_state):
             duration = _cached_probe_duration_sec(path)
             effective = effective_clip_seconds(
@@ -4878,11 +5094,16 @@ def _enqueue_upload_batch(choice: dict, uploads: list) -> None:
 def _try_enqueue_choice(choice: dict) -> None:
     """Queue the current Home form. Same checks as Separate tracks."""
     uploads = choice.get("uploaded")
-    if isinstance(uploads, list) and len(uploads) > 1:
+    live_batch = isinstance(uploads, list) and len(uploads) > 1
+    batch_paths = _stored_batch_paths()
+    if len(batch_paths) > 1 or live_batch:
         if choice.get("error"):
             st.error(choice["error"])
             return
-        _enqueue_upload_batch(choice, uploads)
+        if len(batch_paths) > 1:
+            _enqueue_upload_batch(choice, [], staged_paths=batch_paths)
+        else:
+            _enqueue_upload_batch(choice, list(uploads))
         return
     if choice.get("error"):
         st.error(choice["error"])
@@ -4910,6 +5131,7 @@ def _has_source_for_job(choice: dict) -> bool:
     ) or (uploaded is not None and not isinstance(uploaded, list))
     return bool(
         has_upload
+        or len(_stored_batch_paths()) > 1
         or choice.get("youtube_url")
         or (
             st.session_state.get("carry_over_audio_path")
@@ -4926,6 +5148,8 @@ def _render_new_workspace(demucs_ok: bool) -> None:
     choice = _render_separation_controls()
     if st.session_state.pop("isolate_search_enqueue", False):
         _try_enqueue_choice(choice)
+    if current_setup_step(st.session_state) != SETUP_STEP_SEPARATE:
+        return
     # Jobs run one at a time. Saying "Separate tracks" while one is already
     # running promises something immediate and then silently queues instead.
     busy = separation_in_progress()

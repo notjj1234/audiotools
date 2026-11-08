@@ -151,14 +151,57 @@ def home_flag_css() -> str:
   .stApp:has(.att-home-v2) [data-testid="stMainBlockContainer"] {{
     background: {HOME_BG} !important;
   }}
+  /* Full-bleed Home hides the Streamlit header while the rail is open.
+     Streamlit 1.59 renders stExpandSidebarButton inside stHeader when the
+     sidebar collapses — reveal that header only in the collapsed state. */
   .stApp:has(.att-home-v2) [data-testid="stHeader"] {{
     display: none !important;
     height: 0 !important;
     min-height: 0 !important;
   }}
+  .stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stHeader"] {{
+    display: flex !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 48px !important;
+    min-height: 0 !important;
+    background: transparent !important;
+    pointer-events: none !important;
+    z-index: 1000 !important;
+  }}
+  .stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stToolbar"] {{
+    width: 100% !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
+    height: 48px !important;
+  }}
+  /* ⋮ main menu: top-right of the viewport when the rail is collapsed. */
+  .stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMainMenu"],
+  .stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMainMenuButton"] {{
+    position: fixed !important;
+    top: 12px !important;
+    right: 12px !important;
+    left: auto !important;
+    z-index: 1001 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: {HOME_TEXT} !important;
+  }}
   .stApp:has(.att-home-v2) [data-testid="stMain"] {{
     height: 100vh !important;
     overflow: hidden !important;
+  }}
+  /* Collapsed: slim top pocket for >> so it does not cover Home content. */
+  .stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stMain"] {{
+    box-sizing: border-box !important;
+    padding-top: 48px !important;
+    background: {HOME_BG} !important;
   }}
   .stApp:has(.att-home-v2) [data-testid="stMain"] [data-testid="stMainBlockContainer"],
   .stApp:has(.att-home-v2) [data-testid="stMain"] [data-testid="stVerticalBlock"] {{
@@ -217,6 +260,7 @@ def home_flag_css() -> str:
     width: 0 !important;
     min-width: 0 !important;
     max-width: 0 !important;
+    overflow: visible !important;
   }}
   .att-home-lockup {{
     position: fixed;
@@ -253,8 +297,8 @@ def home_flag_css() -> str:
     color: {HOME_WORDMARK};
     white-space: nowrap;
   }}
-  .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapseButton"],
-  .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapsedControl"] {{
+  /* Expanded rail: collapse chevron sits at the right edge of the 240px rail. */
+  .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapseButton"] {{
     position: absolute !important;
     top: 30px !important;
     left: 196px !important;
@@ -263,8 +307,24 @@ def home_flag_css() -> str:
     z-index: 7 !important;
     visibility: visible !important;
   }}
-  .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapseButton"] button,
-  .stApp:has(.att-shell-v2) [data-testid="stExpandSidebarButton"] button {{
+  /* Collapsed reopen lives in stHeader (Streamlit 1.59). Sit it in the
+     48px top pocket above Home content — not over the library surface. */
+  .stApp:has(.att-shell-v2) [data-testid="stExpandSidebarButton"] {{
+    position: fixed !important;
+    top: 12px !important;
+    left: 12px !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    z-index: 1001 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    background: transparent !important;
+    color: {HOME_TEXT} !important;
+  }}
+  .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapseButton"] button {{
     width: 24px !important;
     height: 24px !important;
     min-height: 24px !important;
@@ -333,7 +393,16 @@ def home_flag_css() -> str:
     transition: background-color 0.2s ease, color 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }}
   .stApp:has(.att-shell-v2) [data-testid="stSidebarNav"] a span {{
+    display: inline-flex !important;
+    align-items: center !important;
     font-weight: 400 !important;
+    line-height: 16px !important;
+  }}
+  /* Streamlit reserves a bold ::after so active tabs don't jump width.
+     Font weight stays 400 here, and that ghost shifts the label above the icon. */
+  .stApp:has(.att-shell-v2) [data-testid="stSidebarNav"] a span::after {{
+    content: none !important;
+    display: none !important;
   }}
   .stApp:has(.att-shell-v2) [data-testid="stSidebarNav"] a::before {{
     content: "";
@@ -357,6 +426,7 @@ def home_flag_css() -> str:
   }}
   .stApp:has(.att-shell-v2) [data-testid="stSidebarNav"] a:focus-visible,
   .stApp:has(.att-shell-v2) [data-testid="stSidebarCollapseButton"] button:focus-visible,
+  .stApp:has(.att-shell-v2) [data-testid="stExpandSidebarButton"]:focus-visible,
   .stApp:has(.att-shell-v2) [data-testid="stExpandSidebarButton"] button:focus-visible {{
     outline: 2px solid {HOME_ACCENT} !important;
     outline-offset: 2px !important;
@@ -399,11 +469,33 @@ def home_flag_css() -> str:
   .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] p {{
     color: {HOME_TEXT} !important;
     font-size: 14px !important;
-    line-height: 20px !important;
+    line-height: 16px !important;
     font-weight: 400 !important;
     letter-spacing: 0 !important;
     text-transform: none !important;
     white-space: nowrap !important;
+  }}
+  .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stRadioOption"] {{
+    display: flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }}
+  .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stRadioOption"] > div,
+  .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stRadioOption"] > div > div {{
+    display: flex !important;
+    align-items: center !important;
+  }}
+  .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stRadioOption"] p {{
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 16px !important;
+  }}
+  .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stWidgetLabel"] [data-testid="stTooltipIcon"] {{
+    display: inline-flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+    line-height: 0 !important;
   }}
   .stApp:has(.att-shell-v2) [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {{
     width: 100% !important;

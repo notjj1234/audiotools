@@ -32,7 +32,7 @@ Python **3.11** (3.10–3.12 only). Desktop installers and the tester app: [DESK
 
 - [Quickstart](#quickstart)
 - [Tester](#tester)
-- [Build installers (0.1.5)](#build-installers-015)
+- [Build installers (0.1.6)](#build-installers-016)
 - [Contributing](#contributing)
 
 ## Quickstart
@@ -79,7 +79,7 @@ pip install -e ".[demucs,desktop,roformer,separator]"
 
 ---
 
-## Build installers (0.1.5)
+## Build installers (0.1.6)
 
 ### Windows CPU
 
@@ -95,7 +95,7 @@ $env:AUDIO_TOOLS_EDITION = "cpu"
 pyinstaller packaging/audio_tools.spec --noconfirm --clean
 powershell -ExecutionPolicy Bypass -File packaging/make_windows_installer.ps1 -Flavor cpu -CopyToDownloads
 ```
-→ `%USERPROFILE%\Downloads\AudioTools-0.1.5-windows-x64-cpu-setup.exe`
+→ `%USERPROFILE%\Downloads\AudioTools-0.1.6-windows-x64-cpu-setup.exe`
 
 ### Windows combined (CPU + NVIDIA GPU)
 
@@ -112,7 +112,7 @@ $env:AUDIO_TOOLS_EDITION = "both"
 pyinstaller packaging/audio_tools.spec --noconfirm --clean
 powershell -ExecutionPolicy Bypass -File packaging/make_windows_installer.ps1 -Flavor both -CopyToDownloads
 ```
-→ `%USERPROFILE%\Downloads\AudioTools-0.1.5-windows-x64-both-setup.exe`
+→ `%USERPROFILE%\Downloads\AudioTools-0.1.6-windows-x64-both-setup.exe`
 
 ### Windows GPU (CUDA) only
 
@@ -123,7 +123,7 @@ $env:AUDIO_TOOLS_EDITION = "cuda"
 pyinstaller packaging/audio_tools.spec --noconfirm --clean
 powershell -ExecutionPolicy Bypass -File packaging/make_windows_installer.ps1 -Flavor cuda -CopyToDownloads
 ```
-→ `%USERPROFILE%\Downloads\AudioTools-0.1.5-windows-x64-cuda-setup.exe`
+→ `%USERPROFILE%\Downloads\AudioTools-0.1.6-windows-x64-cuda-setup.exe`
 
 ### macOS Apple Silicon (M1–M4)
 
@@ -142,7 +142,7 @@ make desktop-build
 make desktop-pkg
 ```
 
-→ `~/Downloads/AudioTools-0.1.5-macos-arm64-silicon.pkg`
+→ `~/Downloads/AudioTools-0.1.6-macos-arm64-silicon.pkg`
 
 
 ### macOS Intel (x64)
@@ -165,7 +165,7 @@ make mixer-build
 ./packaging/make_pkg.sh
 ```
 
-→ `~/Downloads/AudioTools-0.1.5-macos-x64-intel.pkg`
+→ `~/Downloads/AudioTools-0.1.6-macos-x64-intel.pkg`
 
 ---
 

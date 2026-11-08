@@ -6,6 +6,12 @@ type Row = {
   title: string;
   subtitle: string;
   age: string;
+  /** Stored length. Blank when the library row has no duration. */
+  duration?: string;
+  /** Stored BPM. Blank when analysis has no tempo. */
+  tempo?: string;
+  /** Path-free YouTube CDN URL when the run came from YouTube; else empty. */
+  art?: string;
   action: "practice" | "analyse" | string;
   state?: "ready" | "analysing" | "waiting" | "failed" | "idle" | string;
 };
@@ -161,6 +167,102 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** Stable 32-bit fingerprint of a Recents token (FNV-1a). */
+function hashToken(token: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < token.length; i++) {
+    h ^= token.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Only public YouTube thumbnail hosts — never file:// or arbitrary URLs. */
+function safeYoutubeArtUrl(raw: string): string {
+  const url = (raw || "").trim();
+  if (!url.startsWith("https://i.ytimg.com/vi/")) return "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname !== "i.ytimg.com") return "";
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    // /vi/<id>/hqdefault.jpg
+    if (parts.length < 3 || parts[0] !== "vi") return "";
+    const vid = parts[1];
+    if (!vid || !/^[A-Za-z0-9_-]+$/.test(vid)) return "";
+    return `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+  } catch {
+    return "";
+  }
+}
+
+function paintSignalMotif(art: HTMLSpanElement, token: string): void {
+  const seed = token.trim();
+  if (!seed) return;
+
+  const h = hashToken(seed);
+  const bandCount = 4 + (h % 3);
+  const tilt = ((h >> 3) % 7) - 3;
+  const washX = 20 + ((h >> 8) % 60);
+  const washY = 18 + ((h >> 14) % 55);
+  const washR = 42 + ((h >> 20) % 28);
+  const accentOp = (0.1 + ((h >> 6) % 5) * 0.012).toFixed(3);
+
+  const bands: string[] = [];
+  for (let i = 0; i < bandCount; i++) {
+    const bit = (h >>> (i * 4)) & 0xf;
+    const y = 28 + i * 18 + (bit % 5);
+    const x = 10 + ((bit * 3) % 18);
+    const w = 70 + ((bit * 7) % 50);
+    const op = (0.14 + (bit % 5) * 0.03).toFixed(3);
+    bands.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="2" rx="1" fill="var(--home-line)" fill-opacity="${op}"/>`,
+    );
+  }
+
+  art.innerHTML =
+    `<svg class="art-signal" viewBox="0 0 150 150" width="150" height="150" aria-hidden="true" focusable="false">` +
+    `<defs>` +
+    `<radialGradient id="aw-${seed}" cx="${washX}%" cy="${washY}%" r="${washR}%">` +
+    `<stop offset="0%" stop-color="var(--home-wash)" stop-opacity="0.55"/>` +
+    `<stop offset="100%" stop-color="var(--home-art)" stop-opacity="0"/>` +
+    `</radialGradient>` +
+    `</defs>` +
+    `<rect width="150" height="150" fill="var(--home-art)"/>` +
+    `<rect width="150" height="150" fill="url(#aw-${seed})"/>` +
+    `<circle cx="${washX * 1.5}" cy="${washY * 1.5}" r="${22 + ((h >> 10) % 16)}" ` +
+    `fill="var(--home-accent)" fill-opacity="${accentOp}"/>` +
+    `<g transform="rotate(${tilt} 75 75)">${bands.join("")}</g>` +
+    `</svg>`;
+}
+
+/**
+ * Recents art: YouTube CDN thumb when ``art`` is a safe ytimg URL;
+ * otherwise a quiet token motif. Empty token + no art ⇒ solid `--home-art`.
+ */
+function recentArt(token: string, artUrl?: string): HTMLSpanElement {
+  const art = el("span", "art");
+  art.setAttribute("aria-hidden", "true");
+  const safe = safeYoutubeArtUrl(artUrl || "");
+  if (safe) {
+    art.classList.add("has-thumb");
+    const img = el("img", "art-thumb");
+    img.alt = "";
+    img.decoding = "async";
+    img.loading = "lazy";
+    img.referrerPolicy = "no-referrer";
+    img.src = safe;
+    img.addEventListener("error", () => {
+      img.remove();
+      art.classList.remove("has-thumb");
+      paintSignalMotif(art, token);
+    });
+    art.append(img);
+    return art;
+  }
+  paintSignalMotif(art, token);
+  return art;
+}
+
 function send(nonce: string, type: string, id: string): void {
   if (type === "delete_song" || type === "delete_songs") rememberScroll();
   Streamlit.setComponentValue({ nonce, type, id });
@@ -243,39 +345,20 @@ function paint(props: Props): void {
   if (!root) return;
   root.replaceChildren();
   const home = el("div", "home");
-
-  const cards = props.cards || [];
-  rail(home, "cards", (scroller) => {
-    cards.forEach((card) => {
-      const button = el("button", "card");
-      button.type = "button";
-      button.dataset.card = card.id;
-      button.dataset.focusid = `card-${card.id}`;
-      button.title = card.subtitle || card.title;
-      const glyph = el("span", "glyph");
-      glyph.style.color = "#F6AD49";
-      const icon = card.id === "youtube" ? "save" : card.id === "tab" ? "doc" : "wave";
-      glyph.innerHTML = svg(icon, 20);
-      const label = el("span", "label");
-      label.textContent = card.title;
-      button.append(glyph, label);
-      button.addEventListener("click", () => send(nonce, "open_card", card.id));
-      scroller.append(button);
-    });
-  });
+  const main = el("div", "home-main");
+  home.append(main);
 
   const recentsHeading = el("h2");
   recentsHeading.textContent = "Recents";
-  home.append(recentsHeading);
+  main.append(recentsHeading);
   const recents = props.recents || [];
-  rail(home, "recents", (scroller) => {
+  rail(main, "recents", (scroller) => {
     recents.forEach((row) => {
       const button = el("button", "recent");
       button.type = "button";
       button.dataset.recent = row.token;
       button.dataset.focusid = `recent-${row.token}`;
-      const art = el("span", "art");
-      art.setAttribute("aria-hidden", "true");
+      const art = recentArt(row.token || "", row.art || "");
       const title = el("span", "title");
       title.textContent = row.title;
       const meta = el("span", "meta");
@@ -417,17 +500,22 @@ function paint(props: Props): void {
     paint(lastProps);
   });
   filters.append(selectToggle);
+  const add = el("button", "add-file");
+  add.type = "button";
+  add.dataset.focusid = "add-file";
+  add.textContent = "Pick a local file";
+  add.addEventListener("click", () => send(nonce, "open_card", "learn"));
   const tools = el("div", "files-tools");
-  tools.append(search, sort);
+  tools.append(add, search, sort);
   top.append(filesHeading, toolbar, tools);
   head.append(top, filters);
-  home.append(head);
+  main.append(head);
 
   if (props.flash && props.flash.message) {
     const alert = el("div", "alert");
     alert.setAttribute("role", "alert");
     alert.textContent = props.flash.message;
-    home.append(alert);
+    main.append(alert);
   }
 
   const files = el("div", "files-scroll");
@@ -518,10 +606,24 @@ function paint(props: Props): void {
       const titleHead = el("th");
       titleHead.textContent = label(props, "title", "Title");
       const createdHead = el("th", "col-created");
-      createdHead.textContent = "Created";
+      const createdSort = el("button", "sort-head");
+      createdSort.type = "button";
+      createdSort.dataset.focusid = "created-sort";
+      createdSort.textContent = "Created";
+      createdSort.setAttribute("aria-sort", sortOldest ? "ascending" : "descending");
+      createdSort.addEventListener("click", () => {
+        sortOldest = !sortOldest;
+        restoreFocus = "created-sort";
+        paint(lastProps);
+      });
+      createdHead.append(createdSort);
+      const durationHead = el("th", "col-duration");
+      durationHead.textContent = "Duration";
+      const tempoHead = el("th", "col-tempo");
+      tempoHead.textContent = "Tempo";
       const actionHead = el("th", "col-action");
       actionHead.textContent = "";
-      header.append(titleHead, createdHead, actionHead);
+      header.append(titleHead, createdHead, durationHead, tempoHead, actionHead);
       thead.append(header);
       const body = el("tbody");
       shown.forEach((row) => {
@@ -551,7 +653,9 @@ function paint(props: Props): void {
         const name = el("span", "name");
         name.textContent = row.title;
         const sub = el("span", "sub");
-        sub.textContent = row.subtitle || "";
+        // Ready rows use the Duration and Tempo columns. The analysis line
+        // stays off this row so a missing key is not shown as a placeholder.
+        if (row.state !== "ready") sub.textContent = row.subtitle || "";
         opener.append(name, sub);
         if (isLocked(row)) {
           opener.disabled = true;
@@ -565,6 +669,10 @@ function paint(props: Props): void {
         titleCell.append(opener);
         const created = el("td", "col-created");
         created.textContent = row.age || "";
+        const duration = el("td", "col-duration");
+        duration.textContent = row.duration || "";
+        const tempo = el("td", "col-tempo");
+        tempo.textContent = row.tempo || "";
         const action = el("td", "col-action");
         const kebab = el("button", "icon-btn");
         kebab.type = "button";
@@ -583,14 +691,14 @@ function paint(props: Props): void {
           });
         });
         action.append(kebab);
-        tr.append(titleCell, created, action);
+        tr.append(titleCell, created, duration, tempo, action);
         body.append(tr);
       });
       table.append(thead, body);
       files.append(table);
     }
   }
-  home.append(files);
+  main.append(files);
   root.append(home);
   restoreScroll();
 

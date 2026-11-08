@@ -823,6 +823,8 @@ def test_lite_new_cta_captions_chosen_outcome_and_source():
         source.find("def _render_new_workspace") : source.find("def _render_mixer_region_caption")
     ]
     assert 'key="isolate_separate"' in new_ws
+    assert "SETUP_STEP_SEPARATE" in new_ws
+    assert new_ws.find("SETUP_STEP_SEPARATE") < new_ws.find('key="isolate_separate"')
     assert "_try_enqueue_choice(choice)" in new_ws
     assert "OUTCOME_CARD_KEY" in new_ws
     assert "_has_source_for_job(choice)" in new_ws
@@ -929,10 +931,16 @@ def test_restoring_settings_never_overwrites_a_live_choice():
 
 
 def test_ui_state_payload_carries_mode_and_settings(tmp_path):
-    session = {UI_MODE_KEY: "Pro", "isolate_quality": "high"}
+    session = {
+        UI_MODE_KEY: "Pro",
+        "isolate_quality": "high",
+        "isolate_setup_step": "separate",
+    }
     payload = isolate_ui_state_payload(session)
     assert payload["mode"] == "Pro"
+    assert payload["mode"] in UI_MODES
     assert payload["settings"]["isolate_quality"] == "high"
+    assert "isolate_setup_step" not in payload
 
     restored: dict = {}
     apply_stored_isolate_ui_state(restored, payload)
@@ -955,6 +963,109 @@ def test_writing_mode_does_not_erase_the_rest_of_the_ui_state(tmp_path):
     assert stored["mode"] == "Pro"
     assert stored["workspace"] == "Mixer"
     assert stored["run_dir"] == "/runs/abc"
+
+
+def test_current_setup_step_defaults_to_source():
+    from ui.isolate_state import (
+        SETUP_STEP_KEY,
+        SETUP_STEP_SEPARATE,
+        SETUP_STEP_SOURCE,
+        current_setup_step,
+    )
+
+    assert current_setup_step({}) == SETUP_STEP_SOURCE
+    assert current_setup_step({SETUP_STEP_KEY: "nope"}) == SETUP_STEP_SOURCE
+    assert current_setup_step({SETUP_STEP_KEY: SETUP_STEP_SEPARATE}) == SETUP_STEP_SEPARATE
+
+
+def test_setup_continue_enabled_rules():
+    from ui.isolate_state import setup_continue_enabled
+
+    base = dict(
+        download_in_progress=False,
+        batch_count=0,
+        live_upload_count=0,
+        youtube_url="",
+        pending_fp=None,
+        pending_ready=False,
+    )
+    assert setup_continue_enabled(**base) is False
+    assert setup_continue_enabled(**{**base, "download_in_progress": True, "pending_ready": True}) is False
+    assert setup_continue_enabled(**{**base, "pending_ready": True}) is True
+    youtube = "https://youtu.be/abc"
+    assert (
+        setup_continue_enabled(
+            **{**base, "youtube_url": youtube, "pending_ready": True, "pending_fp": "song.wav:1"}
+        )
+        is False
+    )
+    assert (
+        setup_continue_enabled(
+            **{
+                **base,
+                "youtube_url": youtube,
+                "pending_ready": True,
+                "pending_fp": f"youtube:{youtube}",
+            }
+        )
+        is True
+    )
+    assert (
+        setup_continue_enabled(
+            **{**base, "youtube_url": "https://example.com/song.mp3", "pending_ready": False}
+        )
+        is True
+    )
+    assert (
+        setup_continue_enabled(
+            **{
+                **base,
+                "batch_count": 2,
+                "youtube_url": youtube,
+                "pending_ready": False,
+            }
+        )
+        is True
+    )
+    assert setup_continue_enabled(**{**base, "live_upload_count": 3}) is True
+    assert (
+        setup_continue_enabled(
+            **{**base, "batch_count": 2, "download_in_progress": True}
+        )
+        is False
+    )
+
+
+def test_draft_snapshot_keeps_step_and_batch_paths():
+    from ui.isolate_state import (
+        DRAFT_SOURCES_KEY,
+        OPEN_MIX_TABS_KEY,
+        SETUP_STEP_KEY,
+        SETUP_STEP_SEPARATE,
+        SETUP_STEP_SOURCE,
+        focus_new_draft_tab,
+        open_new_draft_tab,
+        reset_new_tab_source,
+    )
+
+    session: dict = {OPEN_MIX_TABS_KEY: []}
+    first = open_new_draft_tab(session, fresh=True)
+    session[SETUP_STEP_KEY] = SETUP_STEP_SEPARATE
+    session["isolate_batch_paths"] = ["/tmp/a.wav", "/tmp/b.wav"]
+    session["isolate_batch_fp"] = "a.wav:1|b.wav:2"
+    second = open_new_draft_tab(session, fresh=True)
+    assert session[SETUP_STEP_KEY] == SETUP_STEP_SOURCE
+    assert "isolate_batch_paths" not in session
+    saved = session[DRAFT_SOURCES_KEY][first]
+    assert saved[SETUP_STEP_KEY] == SETUP_STEP_SEPARATE
+    assert saved["isolate_batch_paths"] == ["/tmp/a.wav", "/tmp/b.wav"]
+    assert saved["isolate_batch_fp"] == "a.wav:1|b.wav:2"
+    focus_new_draft_tab(session, second)
+    reset_new_tab_source(session)
+    focus_new_draft_tab(session, first)
+    assert session[SETUP_STEP_KEY] == SETUP_STEP_SEPARATE
+    assert session["isolate_batch_paths"] == ["/tmp/a.wav", "/tmp/b.wav"]
+    assert session["isolate_batch_fp"] == "a.wav:1|b.wav:2"
 
 
 def test_upload_fingerprint():
@@ -1058,9 +1169,15 @@ def test_reset_new_tab_source_remounts_uploader_without_touching_widget_keys():
         "carry_over_is_guitar_stem": True,
         ISOLATE_OUTPUT_NAME_KEY: "Song A",
         ISOLATE_YOUTUBE_URL_KEY: "https://youtu.be/abc",
+        "isolate_setup_step": "separate",
+        "isolate_batch_paths": ["/tmp/a.wav", "/tmp/b.wav"],
+        "isolate_batch_fp": "a.wav:1|b.wav:2",
     }
     reset_new_tab_source(session)
     assert session["isolate_upload_key"] == 4
+    assert session["isolate_setup_step"] == "source"
+    assert "isolate_batch_paths" not in session
+    assert "isolate_batch_fp" not in session
     assert "isolate_pending_audio_path" not in session
     assert "isolate_pending_fp" not in session
     assert "isolate_upload_fp" not in session
@@ -1389,8 +1506,24 @@ def test_youtube_search_use_queues_hit_title():
     controls = source[
         source.find("def _render_separation_controls") : source.find("def _ffmpeg_install_hint")
     ]
-    assert "_download_youtube_with_status(" in controls
-    assert 'key="isolate_youtube_download"' in controls
+    # Screen 1 has no URL to download. Use/Separate still download inside the dialog.
+    assert 'key="isolate_youtube_download"' not in controls
+    assert "_download_youtube_with_status(" not in controls
+    use_to_separate = dialog[
+        dialog.find('key=f"isolate_youtube_pick_') : dialog.find(
+            'key=f"isolate_youtube_separate_'
+        )
+    ]
+    assert "SETUP_STEP_KEY" in use_to_separate
+    assert use_to_separate.find("if err:") < use_to_separate.find("SETUP_STEP_KEY")
+    assert use_to_separate.find("_download_youtube_with_status(") < use_to_separate.find(
+        "_close_youtube_search_dialog()"
+    )
+    separate_block = dialog[dialog.find('key=f"isolate_youtube_separate_') :]
+    separate_block = separate_block[: separate_block.find('key="isolate_youtube_search_prev"')]
+    assert 'st.session_state["isolate_search_enqueue"] = True' in separate_block
+    assert "isolate_setup_step" not in separate_block
+    assert "SETUP_STEP_KEY" not in separate_block
 
 
 def test_enqueue_confirmed_job_opens_queue_with_loading_overlay():
@@ -1527,9 +1660,10 @@ def test_youtube_search_preview_does_not_use_st_video_embed():
         source.find("def _youtube_search_dialog") : source.find("def _stateful_expander")
     ]
     assert "st.video(" not in dialog
+    assert "youtube.com/embed" not in dialog
     assert "Open on YouTube" in dialog
-    assert "isolate_youtube_preview_" in dialog
-    assert "In-app YouTube playback is often blocked" in dialog
+    assert "isolate_youtube_preview_" not in dialog
+    assert "st.expander(" not in dialog
 
 
 def test_staged_audio_for_new_tab_hides_preview_until_youtube_download(tmp_path):
@@ -1568,6 +1702,33 @@ def test_staged_audio_for_new_tab_hides_preview_until_youtube_download(tmp_path)
             youtube_url=url,
             pending_path=str(leftover),
             pending_fp="old.wav:1",
+            pending_exists=True,
+            carry_path=None,
+            carry_exists=False,
+        )
+        is None
+    )
+    direct_url = "https://example.com/song.mp3"
+    direct_file = tmp_path / "direct.mp3"
+    direct_file.write_bytes(b"d")
+    assert (
+        staged_audio_for_new_tab(
+            uploaded=False,
+            youtube_url=direct_url,
+            pending_path=str(direct_file),
+            pending_fp=f"direct:{direct_url}",
+            pending_exists=True,
+            carry_path=None,
+            carry_exists=False,
+        )
+        == str(direct_file)
+    )
+    assert (
+        staged_audio_for_new_tab(
+            uploaded=False,
+            youtube_url=direct_url,
+            pending_path=str(leftover),
+            pending_fp="other.wav:1",
             pending_exists=True,
             carry_path=None,
             carry_exists=False,
@@ -2951,7 +3112,6 @@ def test_home_queue_is_floating_panel_not_bottom_section():
     assert "st-key-isolate_queue_toggle_slot" in css
     assert "right: 6.75rem" not in css
     assert "overflow: visible !important" in css
-    assert "height: 2.5rem !important" in css
     assert 'stVerticalBlock"]:has(.st-key-isolate_queue_float)' in css
     assert "right: 1.15rem" in css
     assert "position: fixed !important" in css
@@ -2965,6 +3125,16 @@ def test_home_queue_is_floating_panel_not_bottom_section():
     assert "min-width: 6.25rem !important" in chrome_css
     assert "flex: 0 0 auto !important" in chrome_css
     assert "letter-wrap" in chrome_css
+    # Match the mix-tabs iframe (48px) so Queue/Refresh top edges do not step.
+    assert "align-items: center !important" in chrome_css
+    btn_block = chrome_css[
+        chrome_css.find(".st-key-isolate_refresh button") : chrome_css.find(
+            ".st-key-isolate_refresh button p"
+        )
+    ]
+    assert "height: 48px !important" in btn_block
+    assert "min-height: 48px !important" in btn_block
+    assert "2.5rem" not in btn_block
     queue_css = css[css.find("Isolate Queue:") : css.find("New-tab outcome")]
     assert "flex: 1 1 100%" not in queue_css
     assert "min-width: 5.5rem" not in queue_css
@@ -3041,20 +3211,123 @@ def test_new_tab_section_and_output_name_prominent_before_advanced():
     assert "_render_engine_panel(" in picker
 
 
-def test_isolate_youtube_paste_and_search_are_always_visible():
+def test_isolate_youtube_search_dialog_pages_nine_in_a_three_by_three_grid():
+    """Isolation search is a 3×3 page. A full page of 9 still offers Next.
+
+    YouTube to MP3 keeps PAGE_SIZE 10. This lock is the isolate call sites only.
+    """
+    from ui.youtube_search import PAGE_SIZE, has_next_page, page_offset, result_range_caption
+
+    assert PAGE_SIZE == 10
+    assert has_next_page(9, page_size=9) is True
+    assert has_next_page(8, page_size=9) is False
+    assert page_offset(4, page_size=9) == 27
+    assert result_range_caption(4, 9, page_size=9) == "Page 4 · results 28–36"
+    page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
+    source = page.read_text(encoding="utf-8")
+    search = source[
+        source.find("def _run_youtube_search") : source.find("def _stage_youtube_audio")
+    ]
+    dialog = source[
+        source.find("def _youtube_search_dialog") : source.find("def _stateful_expander")
+    ]
+    assert "ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE = 9" in source
+    assert "max_results=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE" in search
+    assert "page_offset(page, page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE)" in search
+    assert "max_results=YT_SEARCH_PAGE_SIZE" not in search
+    assert "st.columns([1.5, 3.2, 1.3])" not in dialog
+    assert "st.expander(" not in dialog
+    assert 'key=f"isolate_youtube_preview_' not in dialog
+    assert "youtube.com/embed" not in dialog
+    assert "st.columns(3)" in dialog
+    assert "range(3)" in dialog
+    guard = dialog.find("if slot >= len(")
+    pick = dialog.find('key=f"isolate_youtube_pick_')
+    assert guard != -1 and pick != -1 and guard < pick
+    assert "continue" in dialog[guard : guard + 120]
+    assert dialog.count("result_range_caption(") >= 2
+    assert dialog.count("page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE") >= 2
+    assert (
+        "has_next_page(len(hits_state), page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE)"
+        in dialog
+    )
+    assert 'key="isolate_youtube_search_prev"' in dialog
+    assert 'key="isolate_youtube_search_next"' in dialog
+    assert 'key=f"isolate_youtube_separate_p{page}_{vid}"' in dialog
+    assert "isolate_youtube_search_form" in dialog
+
+
+def test_isolate_source_screen_is_upload_then_youtube_search_box():
+    """Screen 1 is two stacked boxes: the existing uploader, then click-to-search.
+
+    A URL field or Download audio button on this screen would bring paste-and-fetch
+    back. The search button keeps its key and is the whole YouTube hit target.
+    """
     page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     source = page.read_text(encoding="utf-8")
     controls = source[
         source.find("def _render_separation_controls") : source.find("def _ffmpeg_install_hint")
     ]
+    source_step = controls[
+        controls.find("if step == SETUP_STEP_SOURCE") : controls.find(
+            "batch_paths = _stored_batch_paths"
+        )
+    ]
     assert 'key="isolate_youtube_enabled"' not in controls
-    assert 'key="isolate_youtube_url"' in controls
-    assert 'key="isolate_youtube_search_open_btn"' in controls
-    assert "YOUTUBE_DISCLAIMER" in controls
-    disc = controls[controls.find("st.caption(YOUTUBE_DISCLAIMER)") - 80 :]
+    assert 'key="isolate_youtube_url"' not in controls
+    assert "st.text_input(" not in source_step
+    assert 'key="isolate_youtube_download"' not in source_step
+    assert "st.columns([4, 1]" not in source_step
+    assert "queue_youtube_url" not in source_step
+    assert 'drew_youtube, "isolate_youtube_url", ISOLATE_YOUTUBE_URL_PENDING_KEY' in controls
+    assert "apply_pending_youtube_url(st.session_state)" in controls
+    open_at = source_step.find('key="isolate_youtube_search_open_btn"')
+    assert open_at != -1
+    button_at = source_step.rfind("st.button(", 0, open_at)
+    assert button_at != -1
+    assert "st.columns" not in source_step[max(0, button_at - 400) : button_at]
+    button_src = source_step[button_at : open_at + 180]
+    assert "Search YouTube" in button_src
+    assert 'width="stretch"' in button_src
+    handler = source_step[open_at : open_at + 520]
+    assert "ISOLATE_YOUTUBE_SEARCH_OPEN_KEY] = True" in handler
+    assert "_youtube_search_dialog()" in handler
+    assert "accept_multiple_files=True" in source_step
+    assert "_HOME_UPLOAD_TYPES" in source_step
+    assert 'key=f"isolate_upload_{st.session_state.get(\'isolate_upload_key\', 0)}"' in source_step
+    assert "_remember_batch_uploads(uploads)" in source_step
+    assert "_render_batch_caption(batch_count)" in source_step
+    assert source_step.find("st.file_uploader(") < open_at
+    assert 'key="isolate_setup_continue"' in source_step
+    assert 'type="primary"' in source_step[source_step.find('key="isolate_setup_continue"') - 80 :]
+    assert "is_direct_media_url(direct_url)" in source_step
+    assert "_resolve_audio_for_job" in source_step
+    assert "YOUTUBE_DISCLAIMER" in source_step
+    disc = source_step[source_step.find("st.caption(YOUTUBE_DISCLAIMER)") - 80 :]
     assert "is_pro_mode" not in disc[:80]
-    # assert "Off until you paste a URL or search" in controls
     assert "off in this installer build" not in source
+    assert 'key="isolate_source_entry"' in source_step
+    css = (Path(__file__).resolve().parents[1] / "ui" / "app.py").read_text(encoding="utf-8")
+    tile = css[css.find("Isolation Screen 1:") :]
+    assert tile
+    tile = tile[: tile.find("Isolation search 3x3")]
+    assert "st-key-isolate_upload_" in tile
+    assert "st-key-isolate_source_entry" in tile
+    assert "min-height: 7.25rem" in tile
+    assert "100vh" in tile
+    assert "overflow: hidden" in tile
+    assert "justify-content: center" in tile
+    assert "1px dashed" in tile
+    assert "Drop or select files here" in tile
+    assert "Find a public video by song or artist" in tile
+    assert "st-key-isolate_youtube_search_open_btn" in tile
+    assert "st-key-yt_audio_search_open_btn" not in tile
+    assert "up to 5" not in tile
+    assert "WMA" not in tile
+    assert "Cloud storage" not in tile
+    grid_css = css[css.find("Isolation search 3x3") : css.find("Isolation search 3x3") + 700]
+    assert "st-key-isolate_youtube_pick_" in grid_css
+    assert "st-key-yt_audio_search_open_btn" not in grid_css
 
 
 def test_mixer_builds_current_mix_on_save_click():
@@ -3165,8 +3438,50 @@ def test_lite_region_defaults_full_file_with_safer_warn():
     assert "LITE_MAX_DURATION_SEC" in region
     assert "float(duration)" in region
     assert "clamp_lite_clip" not in enqueue
+    choice = source[
+        source.find("def _separation_choice_from_session") : source.find(
+            "def _render_separation_controls"
+        )
+    ]
+    controls = source[
+        source.find("def _render_separation_controls") : source.find("def _ffmpeg_install_hint")
+    ]
+    assert "def _separation_choice_from_session" in source
+    assert "clamp_lite_clip" not in choice
+    assert "clamp_lite_clip" not in controls
     assert "is_pro_mode" in region
     assert "no silent clamp" in region or "never a silent clamp" in region
+
+
+def test_setup_step_split_keeps_download_and_batch_guards():
+    page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
+    source = page.read_text(encoding="utf-8")
+    assert source.count("_render_section_preview(") == 1
+    controls = source[
+        source.find("def _render_separation_controls") : source.find("def _ffmpeg_install_hint")
+    ]
+    source_step = controls[
+        controls.find("if step == SETUP_STEP_SOURCE") : controls.find(
+            "batch_paths = _stored_batch_paths"
+        )
+    ]
+    assert 'key="isolate_youtube_download"' not in source_step
+    assert 'key="isolate_youtube_search_open_btn"' in source_step
+    assert source_step.find('key="isolate_youtube_search_open_btn"') < source_step.find(
+        "carry_over_path"
+    )
+    back = controls[controls.find('key="isolate_setup_back"') : controls.find('key="isolate_setup_back"') + 400]
+    assert "reset_new_tab_source" not in back
+    assert "isolate_upload_key" not in back
+    enqueue = source[
+        source.find("def _try_enqueue_choice") : source.find("def _has_source_for_job")
+    ]
+    assert "staged_paths=" in enqueue
+    batch = source[
+        source.find("def _enqueue_upload_batch") : source.find("def _try_enqueue_choice")
+    ]
+    assert "staged_paths" in batch
+    assert "_stage_batch_upload" in batch
 
 
 def test_resolve_separation_preset_full_band():

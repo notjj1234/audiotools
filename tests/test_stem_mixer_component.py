@@ -1034,7 +1034,7 @@ def test_mixer_practice_restore_cannot_undo_a_local_loop_or_count_in_edit():
 
 def test_mixer_pan_layout_reads_in_words_and_stacks_when_narrow():
     css = _mixer_src("style.css")
-    assert '"mute solo name vol pan"' in css
+    assert '"name vol mute solo pan"' in css
     assert ".stem-pan {" in css and ".pan-val {" in css
     # Readouts are at least 13px (0.82rem at a 16px root) and not dimmed.
     pan_val = css[css.find(".pan-val {") :]

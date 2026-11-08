@@ -185,18 +185,26 @@ def test_home_v2_does_not_block_on_automatic_analysis():
 
 
 def test_home_source_has_learn_practice_and_analyse_actions():
-    source = (
-        Path(__file__).resolve().parents[1] / "ui" / "pages" / "home.py"
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "ui" / "pages" / "home.py").read_text(encoding="utf-8")
+    frontend = (
+        root / "ui" / "home_component" / "frontend" / "src" / "main.ts"
     ).read_text(encoding="utf-8")
-    assert "Learn a song" in source
     assert '"Practice"' in source
     assert '"Analyse"' in source
     assert "analysis_line(" in source
     assert "open_practice_run(" in source
     assert "analyse_existing_run(" in source
-    # The existing flows stay put.
-    assert "youtube_audio.py" in source
-    assert "tab_pdf.py" in source
+    assert "open_new_separation(" in source
+    # Page cards duplicate the sidebar; the job rail must stay empty.
+    assert "_HOME_CARDS" not in source
+    assert 'key="att_home"' not in source
+    assert 'class="job-rail"' not in frontend
+    assert 'send(nonce, "open_card", "learn")' in frontend
+    # Page entry points stay in the sidebar, not as Home cards.
+    app = (root / "ui" / "app.py").read_text(encoding="utf-8")
+    assert "youtube_audio.py" in app
+    assert "tab_pdf.py" in app
 
 
 def test_analyse_existing_run_updates_meta(tmp_path: Path, monkeypatch):
@@ -282,7 +290,55 @@ def test_home_v2_props_have_no_run_dir():
     assert secret not in encoded
     assert props["rows"][0]["token"]
     assert props["rows"][0]["action"] == "analyse"
-    assert props["cards"][0]["id"] == "learn"
+    assert props.get("cards") in ([], None) or props["cards"] == []
+
+
+def test_recent_art_url_youtube_vs_file():
+    from ui.pages.home import recent_art_url
+
+    yt = recent_art_url(
+        {
+            "source_kind": "youtube",
+            "source_fingerprint": "youtube:https://www.youtube.com/watch?v=BaW_jenozKc",
+        }
+    )
+    assert yt == "https://i.ytimg.com/vi/BaW_jenozKc/hqdefault.jpg"
+    assert recent_art_url({"source_kind": "file", "source_fingerprint": "song.mp3:1"}) == ""
+    assert recent_art_url({"source_fingerprint": "upload:abc"}) == ""
+    # Reject path-looking ids.
+    assert (
+        recent_art_url(
+            {
+                "source_kind": "youtube",
+                "source_fingerprint": "youtube:https://youtu.be/../../etc",
+            }
+        )
+        == ""
+    )
+
+
+def test_home_props_include_youtube_art_only_for_youtube_rows():
+    from ui.pages.home import build_home_props
+
+    props = build_home_props(
+        rows=[
+            {
+                "run_dir": "/tmp/yt",
+                "title": "Song",
+                "source_kind": "youtube",
+                "source_fingerprint": "youtube:https://youtu.be/BaW_jenozKc",
+            },
+            {
+                "run_dir": "/tmp/file",
+                "title": "Local",
+                "source_kind": "file",
+                "source_fingerprint": "local.wav:9",
+            },
+        ]
+    )
+    assert props["recents"][0]["art"] == "https://i.ytimg.com/vi/BaW_jenozKc/hqdefault.jpg"
+    assert props["recents"][1].get("art", "") == ""
+    assert "/tmp/" not in props["recents"][0]["art"]
 
 
 def test_home_muted_token_clears_contrast():
@@ -297,6 +353,56 @@ def test_home_muted_token_clears_contrast():
     assert "overflow: hidden" in css
     assert contrast_ratio(HOME_TEXT_MUTED, HOME_BG) >= 4.5
     assert contrast_ratio("#F4F7FB", HOME_BG) >= 4.5
+
+
+def test_home_v2_collapsed_sidebar_keeps_a_visible_reopen_control():
+    """Streamlit 1.59 parks stExpandSidebarButton inside stHeader.
+
+    Home hides stHeader for a full-bleed canvas; when the sidebar is collapsed
+    that header must reappear enough for the expand control to stay clickable,
+    and Home content must clear a small reserved top pocket so the chevron
+    does not sit on the library surface.
+    """
+    from ui.design_tokens import home_flag_css
+
+    css = home_flag_css()
+    assert 'stSidebar"][aria-expanded="false"]' in css
+    assert "stExpandSidebarButton" in css
+    # Full-bleed Home still hides the header while the rail is open.
+    assert '.stApp:has(.att-home-v2) [data-testid="stHeader"]' in css
+    assert "display: none" in css
+    # Collapsed: reveal header / expand control (not left:196px from the rail).
+    collapsed_prefix = (
+        '.stApp:has(.att-home-v2):has([data-testid="stSidebar"][aria-expanded="false"])'
+    )
+    assert collapsed_prefix in css
+    collapsed_header = css.split(collapsed_prefix)[1]
+    assert 'stHeader"]' in collapsed_header
+    assert "display: none" not in collapsed_header.split("}")[0]
+    assert "display: flex" in collapsed_header.split("}")[0]
+    # Slim reserved pocket above the Home iframe (not a giant left gutter).
+    assert f'{collapsed_prefix} [data-testid="stMain"]' in css
+    main_snip = css.split(f'{collapsed_prefix} [data-testid="stMain"]', 1)[1][:280]
+    assert "padding-top: 48px" in main_snip
+    expand_sel = '[data-testid="stExpandSidebarButton"]'
+    assert expand_sel in css
+    expand_snip = css.split(expand_sel, 1)[1][:350]
+    assert "position: fixed" in expand_snip
+    assert "top: 12px" in expand_snip
+    assert "left: 12px" in expand_snip
+    assert "left: 196px" not in expand_snip
+    assert "top: 30px" not in expand_snip
+    # Main menu (⋮) must sit top-right, not beside >> in a 48px header pocket.
+    header_rule = css.split(f'{collapsed_prefix} [data-testid="stHeader"]', 1)[1][:320]
+    assert "width: 48px" not in header_rule
+    assert "width: 100%" in header_rule or "right: 0" in header_rule
+    menu_sel = '[data-testid="stMainMenuButton"]'
+    assert menu_sel in css
+    menu_snip = css.split(menu_sel, 1)[1][:280]
+    assert "position: fixed" in menu_snip
+    assert "right: 12px" in menu_snip
+    assert "top: 12px" in menu_snip
+    assert "left: 12px" not in menu_snip
 
 
 def test_home_v2_keeps_the_legacy_path():
@@ -315,13 +421,23 @@ def test_home_v2_keeps_the_legacy_path():
         / "src"
         / "main.ts"
     ).read_text(encoding="utf-8")
+    css = (
+        Path(__file__).resolve().parents[1]
+        / "ui"
+        / "home_component"
+        / "frontend"
+        / "src"
+        / "style.css"
+    ).read_text(encoding="utf-8")
     assert "run_dir" not in frontend
     assert "No songs yet." in frontend
     assert "No songs match that search." in frontend
     assert 'class="skel"' in frontend or "className = \"skel\"" in frontend or 'el("div", "skel")' in frontend
-    assert "#F6AD49" in frontend
+    assert "#f6ad49" in css.casefold()
     assert "#75EBF5" not in frontend
     assert "#E9EEF5" not in frontend
+    assert "#75EBF5" not in css
+    assert "#E9EEF5" not in css
 
 
 def test_advance_background_analysis_covers_the_backlog_one_song_at_a_time():

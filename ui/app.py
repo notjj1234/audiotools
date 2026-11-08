@@ -173,6 +173,7 @@ st.html(
     visibility: visible !important;
   }
   [data-testid="stSidebarCollapseButton"] button,
+  [data-testid="stExpandSidebarButton"],
   [data-testid="stExpandSidebarButton"] button {
     opacity: 1 !important;
     color: var(--text-color, inherit) !important;
@@ -291,6 +292,7 @@ st.html(
   [data-testid="stFormSubmitButton"] button:focus-visible,
   [data-testid="stPopover"] button:focus-visible,
   [data-testid="stSidebarCollapseButton"] button:focus-visible,
+  [data-testid="stExpandSidebarButton"]:focus-visible,
   [data-testid="stExpandSidebarButton"] button:focus-visible {
     outline: 2px solid var(--color-accent-primary, #f6ad49) !important;
     outline-offset: 2px !important;
@@ -321,6 +323,23 @@ st.html(
   [data-testid="stHeaderActionElements"] a[href^="#"],
   [data-testid="stMarkdownContainer"] a[href^="#"].headerlink {
     display: none !important;
+  }
+  /* Title + help icon share one center line. vertical-align:middle on the
+     action span sits the ? above a large heading's cap height. */
+  [data-testid="stHeadingWithActionElements"] :is(h1, h2, h3) {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.35rem !important;
+  }
+  [data-testid="stHeadingWithActionElements"] [data-testid="stHeaderActionElements"],
+  [data-testid="stHeadingWithActionElements"] [data-testid="stTooltipIcon"] {
+    display: inline-flex !important;
+    align-items: center !important;
+    align-self: center !important;
+    margin: 0 !important;
+    line-height: 0 !important;
+    vertical-align: middle !important;
   }
 
   /* Mixer iframe: full hit target for Play/Pause (not just the border) */
@@ -400,8 +419,9 @@ st.html(
     position: relative !important;
     z-index: 1 !important;
     background: var(--color-bg-deepest, #192542) !important;
-    padding-top: 0.1rem;
+    padding-top: 0 !important;
     padding-bottom: 0 !important;
+    margin-top: 0 !important;
     margin-bottom: 0 !important;
   }
   /* Streamlit can leave leftover custom-component iframes when keys change. */
@@ -506,12 +526,19 @@ st.html(
   [data-testid="stHorizontalBlock"]:has(.st-key-isolate_refresh) .st-key-isolate_refresh button,
   [data-testid="stHorizontalBlock"]:has(.st-key-isolate_refresh) .st-key-isolate_queue_toggle button {
     box-sizing: border-box !important;
-    height: 2.5rem !important;
-    min-height: 2.5rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 20px !important;
+    /* Same height as the mix-tabs iframe so tops/bottoms share one edge. */
+    height: 48px !important;
+    min-height: 48px !important;
     width: auto !important;
     min-width: 6.25rem !important;
     max-width: none !important;
     margin: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     padding-left: 0.75rem !important;
     padding-right: 0.75rem !important;
     white-space: nowrap !important;
@@ -520,30 +547,273 @@ st.html(
   [data-testid="stHorizontalBlock"]:has(.st-key-isolate_refresh) .st-key-isolate_queue_toggle button p,
   [data-testid="stHorizontalBlock"]:has(.st-key-isolate_refresh) .st-key-isolate_refresh button div,
   [data-testid="stHorizontalBlock"]:has(.st-key-isolate_refresh) .st-key-isolate_queue_toggle button div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    margin: 0 !important;
+    line-height: 20px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: clip !important;
   }
 
-  /* URL + Search rows (Isolation / YouTube to MP3): keep Search on one line. */
-  [data-testid="stHorizontalBlock"]:has(.st-key-isolate_youtube_search_open_btn)
-    [data-testid="stColumn"]:has(.st-key-isolate_youtube_search_open_btn),
+  /* URL + Search row (YouTube to MP3): keep Search on one line. */
   [data-testid="stHorizontalBlock"]:has(.st-key-yt_audio_search_open_btn)
     [data-testid="stColumn"]:has(.st-key-yt_audio_search_open_btn) {
     flex: 0 0 auto !important;
     width: auto !important;
     min-width: 5.5rem !important;
   }
-  .st-key-isolate_youtube_search_open_btn button,
   .st-key-yt_audio_search_open_btn button,
-  [data-testid="stElementContainer"]:has(.st-key-isolate_youtube_search_open_btn) button,
   [data-testid="stElementContainer"]:has(.st-key-yt_audio_search_open_btn) button {
     white-space: nowrap !important;
     min-width: 5.5rem !important;
   }
-  .st-key-isolate_youtube_search_open_btn button p,
   .st-key-yt_audio_search_open_btn button p {
     white-space: nowrap !important;
+  }
+
+  /* Isolation Screen 1: one viewport — no page scroll; stack centered in the
+     main column (below title + sticky Home|mix|+ chrome). */
+  .stApp:has(.st-key-isolate_source_entry) [data-testid="stMain"] {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+  }
+  .stApp:has(.st-key-isolate_source_entry) [data-testid="stMainBlockContainer"] {
+    box-sizing: border-box !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    padding-bottom: 1rem !important;
+  }
+  /* Full-width ancestors so the 40rem stack can sit in the true column center. */
+  .stApp:has(.st-key-isolate_source_entry) [data-testid="stElementContainer"]:has(.st-key-isolate_source_entry),
+  .stApp:has(.st-key-isolate_source_entry) [data-testid="stLayoutWrapper"]:has(.st-key-isolate_source_entry),
+  .stApp:has(.st-key-isolate_source_entry) [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-isolate_source_entry) {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  /* One nearest wrapper only — nested :has() min-heights would stack past 100vh. */
+  [data-testid="stElementContainer"]:has(> .st-key-isolate_source_entry),
+  [data-testid="stLayoutWrapper"]:has(> .st-key-isolate_source_entry),
+  [data-testid="stVerticalBlockBorderWrapper"]:has(> .st-key-isolate_source_entry) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    /* Remaining space under Streamlit header + title + sticky Home|mix|+ strip. */
+    min-height: calc(100vh - 14.5rem) !important;
+  }
+  .st-key-isolate_source_entry {
+    width: min(40rem, 100%);
+    max-width: 40rem;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stWidgetLabel"] {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+  /* Shared track with YouTube box: same padding, 2.5rem plus, 1rem gap.
+     justify-content:center made each group's plus sit at a different x. */
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"] {
+    box-sizing: border-box !important;
+    /* Shorter than 11rem so title + tabs + two tiles + Continue fit one viewport. */
+    min-height: 7.25rem !important;
+    border-radius: 0.75rem !important;
+    border: 1px dashed color-mix(in srgb, var(--color-text-primary, #e7e5e4) 34%, transparent) !important;
+    background: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 5%, var(--color-bg-deepest, #192542)) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 1rem !important;
+    padding: 1.25rem 2rem !important;
+    cursor: pointer;
+  }
+  /* Streamlit's inner row is flex:1 / flex-start. Do not restyle the
+     instructions node: a row here puts title + file types on one line. */
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"] > :not(input):not([data-testid="stFileUploaderDropzoneInstructions"]) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex: 0 0 2.5rem !important;
+    width: 2.5rem !important;
+    min-width: 2.5rem !important;
+    max-width: 2.5rem !important;
+    height: auto !important;
+    margin: 0 !important;
+    gap: 0 !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"]:hover {
+    border-color: color-mix(in srgb, var(--color-accent-primary, #f6ad49) 72%, var(--color-text-primary, #e7e5e4)) !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"]:focus-within {
+    outline: 2px solid var(--color-accent-primary, #f6ad49) !important;
+    outline-offset: 3px !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderDropzoneInstructions"]) [data-testid="stBaseButton-secondary"] {
+    width: 2.5rem !important;
+    min-width: 2.5rem !important;
+    height: 2.5rem !important;
+    min-height: 2.5rem !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    color: transparent !important;
+    background:
+      linear-gradient(var(--color-accent-primary, #f6ad49), var(--color-accent-primary, #f6ad49)) center / 0.85rem 2px no-repeat,
+      linear-gradient(var(--color-accent-primary, #f6ad49), var(--color-accent-primary, #f6ad49)) center / 2px 0.85rem no-repeat,
+      color-mix(in srgb, var(--color-text-primary, #e7e5e4) 14%, transparent) !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderDropzoneInstructions"]) [data-testid="stBaseButton-secondary"] * {
+    opacity: 0 !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzoneInstructions"] {
+    display: flex !important;
+    flex: 0 1 auto !important;
+    align-self: center !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    width: auto !important;
+    gap: 0.15rem !important;
+    margin: 0 !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzoneInstructions"] > * {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzoneInstructions"]::before {
+    content: "Drop or select files here";
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.3;
+    color: var(--color-text-primary, #e7e5e4);
+  }
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzoneInstructions"]::after {
+    content: "MP3, WAV, FLAC, M4A, MP4, MOV, WEBM, MKV";
+    font-size: 0.82rem;
+    font-weight: 450;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 78%, transparent);
+  }
+  .st-key-isolate_youtube_search_open_btn button,
+  [data-testid="stElementContainer"]:has(.st-key-isolate_youtube_search_open_btn) button {
+    box-sizing: border-box !important;
+    min-height: 7.25rem !important;
+    height: auto !important;
+    width: 100% !important;
+    border-radius: 0.75rem !important;
+    border: 1px dashed color-mix(in srgb, var(--color-text-primary, #e7e5e4) 34%, transparent) !important;
+    background: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 5%, var(--color-bg-deepest, #192542)) !important;
+    color: var(--color-text-primary, #e7e5e4) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 1rem !important;
+    padding: 1.25rem 2rem !important;
+    white-space: normal !important;
+    font-size: 1rem !important;
+    font-weight: 650 !important;
+    box-shadow: none !important;
+  }
+  .st-key-isolate_youtube_search_open_btn button > * {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: auto !important;
+    flex: 1 1 auto !important;
+    margin: 0 !important;
+  }
+  .st-key-isolate_youtube_search_open_btn button::before {
+    content: "";
+    width: 2.5rem;
+    height: 2.5rem;
+    flex: 0 0 2.5rem;
+    border-radius: 999px;
+    background:
+      linear-gradient(var(--color-accent-primary, #f6ad49), var(--color-accent-primary, #f6ad49)) center / 0.85rem 2px no-repeat,
+      linear-gradient(var(--color-accent-primary, #f6ad49), var(--color-accent-primary, #f6ad49)) center / 2px 0.85rem no-repeat,
+      color-mix(in srgb, var(--color-text-primary, #e7e5e4) 14%, transparent);
+  }
+  .st-key-isolate_youtube_search_open_btn button:hover {
+    border-color: color-mix(in srgb, var(--color-accent-primary, #f6ad49) 72%, var(--color-text-primary, #e7e5e4)) !important;
+    background: color-mix(in srgb, var(--color-accent-primary, #f6ad49) 8%, var(--color-bg-deepest, #192542)) !important;
+  }
+  .st-key-isolate_youtube_search_open_btn button:focus-visible {
+    outline: 2px solid var(--color-accent-primary, #f6ad49) !important;
+    outline-offset: 3px !important;
+  }
+  .st-key-isolate_youtube_search_open_btn button p {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    width: auto !important;
+    margin: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    font-size: 1rem !important;
+    font-weight: 650 !important;
+    line-height: 1.3 !important;
+    color: var(--color-text-primary, #e7e5e4) !important;
+  }
+  .st-key-isolate_youtube_search_open_btn button p::after {
+    content: "Find a public video by song or artist";
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.82rem;
+    font-weight: 450;
+    line-height: 1.3;
+    color: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 78%, transparent);
+  }
+  .st-key-isolate_source_entry [data-testid="stFileUploader"],
+  .st-key-isolate_source_entry [data-testid="stFileUploaderDropzone"],
+  .st-key-isolate_source_entry .st-key-isolate_youtube_search_open_btn,
+  .st-key-isolate_source_entry .st-key-isolate_youtube_search_open_btn button {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  .st-key-isolate_source_entry [data-testid="stCaptionContainer"] {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  .st-key-isolate_source_entry .st-key-isolate_setup_continue {
+    display: flex !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  .st-key-isolate_source_entry .st-key-isolate_setup_continue button,
+  .st-key-isolate_source_entry button.st-key-isolate_setup_continue {
+    width: auto !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Isolation search 3x3 */
+  [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has([class*="st-key-isolate_youtube_pick_"]) {
+    align-items: stretch !important;
+  }
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_pick_"] button,
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_separate_"] button {
+    width: 100% !important;
   }
 
   /* Isolate Queue: non-modal floating activity panel (not a sidebar / drawer). */
@@ -709,6 +979,28 @@ st.html(
   }
   document.addEventListener("selectionchange", clearSidebarSelection);
   document.addEventListener("mouseup", clearSidebarSelection);
+})();
+(function () {
+  /* Streamlit sets iframe title to the component path (e.g. ui.home_component
+     .audio_tools_home). That reads as a debug tooltip over Home; clear it. */
+  if (window.__attClearHomeIframeTitle) return;
+  window.__attClearHomeIframeTitle = true;
+  function clearHomeTitles() {
+    if (!document.querySelector(".att-home-v2")) return;
+    var frames = document.querySelectorAll(
+      'iframe[title*="audio_tools_home"], iframe[title*="home_component"]'
+    );
+    for (var i = 0; i < frames.length; i++) {
+      if (frames[i].getAttribute("title")) frames[i].removeAttribute("title");
+    }
+  }
+  clearHomeTitles();
+  new MutationObserver(clearHomeTitles).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["title"],
+  });
 })();
 (function () {
   if (window.__attSettingsMenuItem) return;

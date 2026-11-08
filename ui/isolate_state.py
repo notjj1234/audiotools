@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 from uuid import uuid4
 
 from audio_to_tab.hardware import HostProbe, desktop_recommend, resolve_desktop_speed
+from audio_to_tab.ingest import is_direct_media_url, is_youtube_url
 from audio_to_tab.isolate import (
     DEMUCS_MODELS,
     FOLD_OTHER_MODES,
@@ -1006,6 +1007,47 @@ ISOLATE_YOUTUBE_URL_PENDING_KEY = "isolate_youtube_url_pending"
 ISOLATE_YOUTUBE_TITLE_PENDING_KEY = "isolate_youtube_title_pending"
 ISOLATE_NAMED_YOUTUBE_URL_KEY = "isolate_named_youtube_url"
 ISOLATE_AUTO_OUTPUT_NAME_KEY = "isolate_auto_output_name"
+SETUP_STEP_KEY = "isolate_setup_step"
+SETUP_STEP_SOURCE = "source"
+SETUP_STEP_SEPARATE = "separate"
+ISOLATE_BATCH_PATHS_KEY = "isolate_batch_paths"
+ISOLATE_BATCH_FP_KEY = "isolate_batch_fp"
+
+
+def current_setup_step(session: Mapping[str, Any]) -> str:
+    """Home form screen. Anything other than separate is the source screen."""
+    if session.get(SETUP_STEP_KEY) == SETUP_STEP_SEPARATE:
+        return SETUP_STEP_SEPARATE
+    return SETUP_STEP_SOURCE
+
+
+def setup_continue_enabled(
+    *,
+    download_in_progress: bool,
+    batch_count: int,
+    live_upload_count: int,
+    youtube_url: str,
+    pending_fp: str | None,
+    pending_ready: bool,
+) -> bool:
+    """Whether Continue can leave the source screen.
+
+    A batch can continue while a URL is still pasted, so submit can show the
+    existing batch block. An unfinished YouTube URL cannot. A direct media
+    URL can, because Continue fetches it.
+    """
+    if download_in_progress:
+        return False
+    if batch_count > 1 or live_upload_count > 1:
+        return True
+    url = (youtube_url or "").strip()
+    if url and is_youtube_url(url):
+        return bool(pending_ready and pending_fp == f"youtube:{url}")
+    if url and is_direct_media_url(url):
+        return True
+    if url:
+        return False
+    return bool(pending_ready)
 
 
 def youtube_video_id(url: str) -> str | None:
@@ -1386,6 +1428,9 @@ def reset_new_tab_source(session: MutableMapping[str, object]) -> None:
         session.pop(key, None)
     queue_clear_youtube_url(session)
     queue_reopen_output_name(session, "")
+    session[SETUP_STEP_KEY] = SETUP_STEP_SOURCE
+    session.pop(ISOLATE_BATCH_PATHS_KEY, None)
+    session.pop(ISOLATE_BATCH_FP_KEY, None)
     tab = str(session.get(SHELL_TAB_KEY) or "")
     if is_new_draft_tab(tab):
         # Keep the empty draft slot in sync after Separate / +.
@@ -1457,6 +1502,9 @@ _DRAFT_SOURCE_LIVE_KEYS = (
     ISOLATE_YOUTUBE_TITLE_PENDING_KEY,
     ISOLATE_NAMED_YOUTUBE_URL_KEY,
     ISOLATE_AUTO_OUTPUT_NAME_KEY,
+    SETUP_STEP_KEY,
+    ISOLATE_BATCH_PATHS_KEY,
+    ISOLATE_BATCH_FP_KEY,
 )
 
 
@@ -3169,12 +3217,13 @@ def staged_audio_for_new_tab(
     """Path to preview on New, or None when there is nothing ready to play.
 
     A pasted YouTube URL does not preview until that URL has been downloaded
-    (pending fingerprint ``youtube:{url}``). Uploads and Tab PDF carry-over
-    preview immediately because the file is already on disk.
+    (pending fingerprint ``youtube:{url}``). A direct media link previews
+    once Continue has saved it (``direct:{url}``). Uploads and Tab PDF
+    carry-over preview immediately because the file is already on disk.
     """
     url = (youtube_url or "").strip()
     if url:
-        if pending_exists and pending_fp == f"youtube:{url}":
+        if pending_exists and pending_fp in {f"youtube:{url}", f"direct:{url}"}:
             return pending_path
         return None
     if pending_exists:

@@ -2399,6 +2399,67 @@ function formatTime(sec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function finiteTimes(values: number[] | undefined): number[] {
+  if (!Array.isArray(values)) return [];
+  return values.filter((value) => Number.isFinite(value) && value >= 0);
+}
+
+/** Bar numbers from a stored downbeat list, or from beats plus a stored meter. */
+function storedBarLabel(t: number): string {
+  const downbeats = finiteTimes(analysisData?.downbeats);
+  if (downbeats.length > 0) {
+    const current = Math.max(1, downbeats.filter((beat) => beat <= t + 0.02).length);
+    return `${current} / ${downbeats.length}`;
+  }
+  const per = Math.floor(Number(analysisData?.beats_per_measure) || 0);
+  const beats = finiteTimes(analysisData?.beats);
+  if (per > 0 && beats.length > 0) {
+    const index = Math.max(1, beats.filter((beat) => beat <= t + 0.02).length);
+    const current = Math.floor((index - 1) / per) + 1;
+    const total = Math.max(1, Math.ceil(beats.length / per));
+    return `${current} / ${total}`;
+  }
+  return "";
+}
+
+function storedTempoKey(): string {
+  const bpm = Number(analysisData?.bpm);
+  const key = String(analysisData?.key || "").trim();
+  const parts: string[] = [];
+  if (Number.isFinite(bpm) && bpm > 0) {
+    parts.push(`${Math.abs(bpm - Math.round(bpm)) < 0.05 ? Math.round(bpm) : bpm.toFixed(1)} bpm`);
+  }
+  if (key) parts.push(key);
+  return parts.join(" · ");
+}
+
+let barRulerKey = "";
+
+function paintBarRuler(dur: number): void {
+  const ruler = document.getElementById("bar-ruler");
+  if (!ruler) return;
+  const downbeats = finiteTimes(analysisData?.downbeats);
+  const key = `${dur.toFixed(2)}:${downbeats.length}`;
+  if (key === barRulerKey) return;
+  barRulerKey = key;
+  if (downbeats.length < 2 || !(dur > 0)) {
+    ruler.hidden = true;
+    ruler.replaceChildren();
+    return;
+  }
+  const step = downbeats.length > 32 ? 4 : 1;
+  ruler.hidden = false;
+  ruler.replaceChildren();
+  downbeats.forEach((beat, index) => {
+    if (index % step !== 0) return;
+    const mark = document.createElement("span");
+    mark.className = "bar-mark";
+    mark.style.left = `${Math.min(100, (beat / dur) * 100)}%`;
+    mark.textContent = String(index + 1);
+    ruler.append(mark);
+  });
+}
+
 /** Drive filled-bar CSS (`--range-fill`) for seek / master range inputs. */
 function syncRangeFill(el: HTMLInputElement | null): void {
   if (!el) return;
@@ -2814,14 +2875,21 @@ function renderPracticePanel(): void {
         '<p class="practice-empty">No chords in this run.</p>';
     } else {
       const chips = chords
-        .map(
-          (chord, index) =>
-            `<div class="chord-chip" data-chord-index="${index}">` +
-            `<input class="chord-chip-symbol" data-chord-index="${index}" value="${escapeHtml(spellChordSymbol(displaySymbol(chord, chordLevel), spelling))}" aria-label="Chord symbol" />` +
+        .map((chord, index) => {
+          const symbol = spellChordSymbol(displaySymbol(chord, chordLevel), spelling);
+          const previous =
+            index > 0
+              ? spellChordSymbol(displaySymbol(chords[index - 1]!, chordLevel), spelling)
+              : "";
+          const repeat = index > 0 && symbol === previous ? " is-repeat" : "";
+          return (
+            `<div class="chord-chip${repeat}" data-chord-index="${index}">` +
+            `<input class="chord-chip-symbol" data-chord-index="${index}" value="${escapeHtml(symbol)}" aria-label="Chord symbol" />` +
             `<span class="chord-difficulty">${escapeHtml(chordDifficulty(chord.symbol))}</span>` +
             `<button type="button" class="chord-chip-time" data-seek="${chord.start}">${readableTime(chord.start)}</button>` +
             `</div>`
-        )
+          );
+        })
         .join("");
       body.innerHTML =
         '<div class="chord-now">' +
@@ -3379,15 +3447,22 @@ function renderUI(theme?: Theme): void {
         </div>
       </header>
       <div class="mixer-transport">
-        <div class="mixer-transport-controls">
-          <button type="button" class="primary live-play" id="btn-playpause" aria-pressed="false">Play</button>
-          <button type="button" class="ghost" id="btn-stop">Stop</button>
-          <button type="button" class="ghost" id="btn-restart">Restart</button>
-          <span class="mixer-time" id="time" aria-label="Playback time">
-            <span id="time-current">0:00</span>
-            <span class="mixer-time-sep" aria-hidden="true">/</span>
-            <span id="time-duration">0:00</span>
-          </span>
+        <div class="song-progress" id="song-progress" aria-hidden="true"></div>
+        <div class="mixer-transport-center">
+          <div class="mixer-transport-controls">
+            <button type="button" class="primary live-play" id="btn-playpause" aria-pressed="false">Play</button>
+            <button type="button" class="ghost" id="btn-stop">Stop</button>
+            <button type="button" class="ghost" id="btn-restart">Restart</button>
+          </div>
+          <div class="mixer-readout">
+            <span class="mixer-time" id="time" aria-label="Playback time">
+              <span id="time-current">0:00</span>
+              <span class="mixer-time-sep" aria-hidden="true">/</span>
+              <span id="time-duration">0:00</span>
+            </span>
+            <span class="mixer-bars" id="time-bars" hidden></span>
+            <span class="mixer-tempo" id="tempo-readout" hidden></span>
+          </div>
         </div>
         <label class="mixer-seek">
           <span class="visually-hidden">Seek</span>
@@ -3467,6 +3542,7 @@ function renderUI(theme?: Theme): void {
           <span id="master-vol-val" class="stem-db">${state.masterVolumeDb.toFixed(1)}</span>
         </label>
         <div class="mixer-stems-wrap">
+          <div class="bar-ruler" id="bar-ruler" hidden></div>
           <div class="mixer-stems" id="stems"></div>
           <div class="mixer-stems-resize" id="btn-resize-stems" role="separator" aria-label="Resize stem waveforms" hidden></div>
         </div>
@@ -3542,12 +3618,6 @@ function renderUI(theme?: Theme): void {
           : "";
       return `
         <div class="stem-row${liveMetro ? " is-metro" : ""}" data-id="${escapeHtml(stem.id)}">
-          <button type="button" class="toggle mute${muted ? " active" : ""}" data-id="${escapeHtml(stem.id)}"
-            aria-label="${muted ? "Unmute" : "Mute"} ${escapeHtml(stem.label)}"
-            aria-pressed="${muted ? "true" : "false"}">M</button>
-          <button type="button" class="toggle solo${soloed ? " active" : ""}" data-id="${escapeHtml(stem.id)}"
-            aria-label="${soloed ? "Unsolo" : "Solo"} ${escapeHtml(stem.label)}"
-            aria-pressed="${soloed ? "true" : "false"}">S</button>
           <div class="stem-name-block">
             <strong class="stem-name"${nameTitle}>${escapeHtml(
               inGroup ? stem.shortLabel || stem.label : stem.label
@@ -3561,6 +3631,12 @@ function renderUI(theme?: Theme): void {
               min="${DB_MIN}" max="${DB_MAX}" step="0.5" value="${db}" />
             <span class="vol-val stem-db">${db.toFixed(1)}</span>
           </label>
+          <button type="button" class="toggle mute${muted ? " active" : ""}" data-id="${escapeHtml(stem.id)}"
+            aria-label="${muted ? "Unmute" : "Mute"} ${escapeHtml(stem.label)}"
+            aria-pressed="${muted ? "true" : "false"}">M</button>
+          <button type="button" class="toggle solo${soloed ? " active" : ""}" data-id="${escapeHtml(stem.id)}"
+            aria-label="${soloed ? "Unsolo" : "Solo"} ${escapeHtml(stem.label)}"
+            aria-pressed="${soloed ? "true" : "false"}">S</button>
           <label class="stem-pan" title="Pan: drag, use arrow keys, or double-click to center">
             <span class="pan-name" aria-hidden="true">Pan</span>
             <span class="visually-hidden">${escapeHtml(stem.label)} pan, left to right</span>
@@ -3842,6 +3918,24 @@ function renderUI(theme?: Theme): void {
     updatePlayheads(t, dur);
     paintStemMeters(t, dur, playing);
     postSidebarChord(t);
+    const barsEl = document.getElementById("time-bars");
+    if (barsEl) {
+      const label = storedBarLabel(t);
+      barsEl.hidden = !label;
+      if (barsEl.textContent !== label) barsEl.textContent = label;
+    }
+    const tempoEl = document.getElementById("tempo-readout");
+    if (tempoEl) {
+      const label = storedTempoKey();
+      tempoEl.hidden = !label;
+      if (tempoEl.textContent !== label) tempoEl.textContent = label;
+    }
+    const transport = document.querySelector<HTMLElement>(".mixer-transport");
+    if (transport) {
+      const pct = dur > 0 ? Math.min(100, Math.max(0, (t / dur) * 100)) : 0;
+      transport.style.setProperty("--song-progress", `${pct}%`);
+    }
+    paintBarRuler(dur);
     updatePracticePanelAt(t);
     if (!hideYoutubeVideo && (ytPlayer || localVideoEl)) {
       syncPictureToStems(playing);
@@ -4196,6 +4290,8 @@ function updateStemChrome(): void {
     const audible = isAudible(id);
     const silencedBySolo = !audible && !muted && !soloed;
     row.classList.toggle("silent", !audible);
+    row.classList.toggle("explicit-mute", muted);
+    row.classList.toggle("implied-mute", silencedBySolo);
     if (silencedBySolo) {
       row.title = "Silent because another stem is soloed";
     } else if (stem?.hint) {
