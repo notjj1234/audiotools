@@ -23,6 +23,15 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
+## Pre-release
+
+**Latest pre-release:** [v0.1.6-alpha-audio-tools](https://github.com/notjj1234/audiotools/releases/tag/v0.1.6-alpha-audio-tools)
+
+### Downloads
+
+- [macOS Apple Silicon (Package)](https://github.com/notjj1234/audiotools/releases/download/v0.1.6-alpha-audio-tools/AudioTools-0.1.6-macos-arm64-silicon.pkg)
+- [Windows (Both CPU+GPU Setup)](https://github.com/notjj1234/audiotools/releases/download/v0.1.6-alpha-audio-tools/AudioTools-0.1.6-windows-x64-both-setup.exe)
+
 <p align="center">
   <img src="docs/screenshots/desktop-home.png" alt="Desktop Home" width="100%">
 </p>
