@@ -1,6 +1,27 @@
-# Audio Tools
+<p align="center">
+  <img src="packaging/icon.png" alt="Audio Tools" width="160">
+</p>
 
-Separate a song into stems, practice with a mixer and chord chart, and export a guitar tab PDF. One shared engine powers a local desktop app and a hosted website.
+<h1 align="center">Audio Tools</h1>
+
+<p align="center">
+  Separate a song into stems, practice with a mixer and chord chart, and export a guitar tab PDF.<br>
+  One shared engine powers a local desktop app and a hosted website.
+</p>
+
+<p align="center">
+  <a href="https://github.com/notjj1234/audiotools/actions/workflows/ci.yml"><img src="https://github.com/notjj1234/audiotools/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT">
+  <img src="https://img.shields.io/badge/python-3.10%E2%80%933.12-blue" alt="Python 3.10–3.12">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey" alt="Platform: macOS and Windows">
+</p>
+
+<p align="center">
+  <a href="DESKTOP.md">Desktop install</a> ·
+  <a href="DEPLOY.md">Hosted deploy</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
 
 <p align="center">
   <img src="docs/screenshots/desktop-home.png" alt="Desktop Home" width="100%">
