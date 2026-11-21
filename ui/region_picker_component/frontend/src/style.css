@@ -37,7 +37,7 @@ button {
   color: var(--text);
   border-radius: var(--radius);
   padding: 0.3rem 0.7rem;
-  font-weight: 600;
+  font-weight: 500;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
@@ -67,33 +67,13 @@ button:focus-visible {
   bottom: 0;
   height: 3px;
   border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--waveform-progress, var(--primary)) 50%,
-    transparent 100%
-  );
-  background-size: 40% 100%;
-  background-repeat: no-repeat;
-  animation: rp-load 1.1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
-}
-
-@keyframes rp-load {
-  from { background-position: -40% 0; }
-  to { background-position: 140% 0; }
+  background: var(--waveform-progress, var(--primary));
+  opacity: 0.7;
 }
 
 @media (prefers-reduced-motion: reduce) {
   button {
     transition: none;
-  }
-  #waveform.is-loading::after {
-    animation: none;
-    left: 0;
-    right: 0;
-    width: 100%;
-    background: var(--waveform-progress, var(--primary));
-    opacity: 0.7;
   }
 }
 
@@ -104,7 +84,7 @@ button:focus-visible {
 
 .meta strong {
   color: var(--text);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .hint {

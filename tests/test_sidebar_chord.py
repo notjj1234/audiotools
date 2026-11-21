@@ -42,3 +42,17 @@ def test_sidebar_chord_markup_is_not_on_the_shell_or_other_pages():
     assert "_render_sidebar_chord(" in workspace
     for name in ("home.py", "youtube_audio.py", "tab_pdf.py", "settings.py"):
         assert "att-sidebar-chord" not in (_ROOT / "ui" / "pages" / name).read_text(encoding="utf-8")
+
+
+def test_sidebar_chord_shows_accuracy_disclaimer_under_the_diagram():
+    isolate = (_ROOT / "ui" / "pages" / "isolate.py").read_text(encoding="utf-8")
+    card = isolate[isolate.find("_SIDEBAR_CHORD_HTML") : isolate.find("def _render_sidebar_chord")]
+    assert 'class="att-sidebar-chord-disclaimer"' in card
+    assert "Not reliable" in card
+    assert "2–3 of every 10" in card or "2-3 of every 10" in card
+    assert "rough guide" in card.lower()
+    assert "😀" not in card and "⚠️" not in card and "✨" not in card
+    diagram_at = card.find('class="att-sidebar-chord-diagram"')
+    disclaimer_at = card.find('class="att-sidebar-chord-disclaimer"')
+    assert diagram_at != -1 and disclaimer_at != -1
+    assert disclaimer_at > diagram_at

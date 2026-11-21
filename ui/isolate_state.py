@@ -427,8 +427,8 @@ OUTCOME_CARDS: dict[str, dict[str, str | int]] = {
     "band": {
         "label": "Every part separately",
         "help": (
-            "Vocals, drums, bass and guitar as separate tracks. Guitar can still "
-            "pick up other instruments. Lite Faster is quicker than Balanced, not "
+            "Vocals, drums, bass, and guitar as separate tracks. Guitar can still "
+            "pick up other instruments. Lite Faster is quicker than Balanced — not "
             "the same quality."
         ),
         "stems_line": "Vocals · Drums · Bass · Guitar",
@@ -438,7 +438,7 @@ OUTCOME_CARDS: dict[str, dict[str, str | int]] = {
         "label": "Guitar on its own",
         "help": (
             "Just the guitar, using the strongest model this computer can run. "
-            "Expect bleed from bass, drums, or vocals; lead and rhythm stay on one track."
+            "Expect bleed from bass, drums, or vocals. Lead and rhythm stay on one track."
         ),
         "stems_line": "Guitar",
         "n_tracks": 1,

@@ -1128,7 +1128,7 @@ def test_tab_pdf_page_has_explicit_developer_playground_disclaimer():
     nav_block = app.split("_nav =")[1].split("pg = st.navigation")[0]
     assert '== "Pro"' not in nav_block
     assert 'st.title(\n        "Tab PDF (demo)"' in page or 'st.title(\n        "Tab PDF (demo)",' in page
-    assert "JJs stuff" in page
+    assert "Not a finished product" in page
     assert "barely works" in page
     assert "st.caption(" not in page.split("def main")[1].split("demucs_ok")[0]
     assert "Demo only — tabs are rough drafts" not in page

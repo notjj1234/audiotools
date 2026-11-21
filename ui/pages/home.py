@@ -55,9 +55,7 @@ _HOME_CSS = """
     text-align: left;
     white-space: normal;
     line-height: 1.25;
-    transition:
-      transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: border-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .st-key-att_home [data-testid="stButton"] button:hover:not(:disabled) {
     border-color: var(--color-accent-primary, #f6ad49);

@@ -5365,11 +5365,40 @@ _SIDEBAR_CHORD_HTML = """
     font-size: 10px;
     font-weight: 700;
   }
+  .att-sidebar-chord-disclaimer {
+    box-sizing: border-box;
+    width: 100%;
+    margin-top: 12px;
+    padding: 8px 10px;
+    border: 1px solid rgba(246, 173, 73, 0.65);
+    border-radius: 8px;
+    background: rgba(246, 173, 73, 0.14);
+    color: #F6AD49;
+    text-align: left;
+  }
+  .att-sidebar-chord-disclaimer-lead {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .att-sidebar-chord-disclaimer-body {
+    display: block;
+    margin-top: 4px;
+    color: #F4F7FB;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+  }
 </style>
 <div class="att-sidebar-chord">
   <div class="att-sidebar-chord-eyebrow">Chord</div>
   <div class="att-sidebar-chord-symbol" aria-live="polite"></div>
   <div class="att-sidebar-chord-diagram"></div>
+  <div class="att-sidebar-chord-disclaimer" role="note">
+    <strong class="att-sidebar-chord-disclaimer-lead">Not reliable</strong>
+    <span class="att-sidebar-chord-disclaimer-body">About 2–3 of every 10 chords are correct. Rough guide only.</span>
+  </div>
 </div>
 """
 

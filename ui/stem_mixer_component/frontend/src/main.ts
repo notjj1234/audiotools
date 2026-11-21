@@ -3450,9 +3450,13 @@ function renderUI(theme?: Theme): void {
         <div class="song-progress" id="song-progress" aria-hidden="true"></div>
         <div class="mixer-transport-center">
           <div class="mixer-transport-controls">
+            <div class="mixer-transport-before-play">
+              <button type="button" class="ghost" id="btn-stop">Stop</button>
+            </div>
             <button type="button" class="primary live-play" id="btn-playpause" aria-pressed="false">Play</button>
-            <button type="button" class="ghost" id="btn-stop">Stop</button>
-            <button type="button" class="ghost" id="btn-restart">Restart</button>
+            <div class="mixer-transport-after-play">
+              <button type="button" class="ghost" id="btn-restart">Restart</button>
+            </div>
           </div>
           <div class="mixer-readout">
             <span class="mixer-time" id="time" aria-label="Playback time">

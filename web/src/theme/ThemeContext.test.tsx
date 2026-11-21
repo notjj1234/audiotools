@@ -47,6 +47,6 @@ describe("ThemeProvider", () => {
         );
       });
     }).not.toThrow();
-    expect(host.textContent).toContain("Theme Mode");
+    expect(host.textContent).toContain("Theme mode");
   });
 });

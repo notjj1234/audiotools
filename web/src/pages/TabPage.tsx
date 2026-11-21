@@ -59,9 +59,9 @@ export function TabPage() {
     <div>
       <h1>Tab PDF (demo)</h1>
       <p className="callout-warning">
-        <strong>Not a finished product.</strong> Tab PDF barely works. Tabs are
-        often wrong or unusable. Best on short solo-guitar clips. For full songs,
-        isolate guitar first on Isolate.
+        <strong>Not a finished product.</strong> Tabs are often wrong or unusable.
+        Best on short solo-guitar clips. For full songs, isolate guitar first on
+        Isolate.
       </p>
       <p className="lede">{HOSTED_FILE_ONLY_NOTE}</p>
       <form className="stack" onSubmit={onSubmit}>

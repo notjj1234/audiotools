@@ -41,11 +41,8 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--ink);
-  background:
-    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(47, 107, 79, 0.18), transparent 55%),
-    radial-gradient(ellipse 60% 40% at 90% 20%, rgba(212, 196, 168, 0.45), transparent 50%),
-    linear-gradient(165deg, #f3f7f2 0%, var(--paper) 45%, #dfe8dc 100%);
-  background-attachment: fixed;
+  /* Quiet paper: tinted neutral only — no hue washes on chrome */
+  background: var(--paper);
 }
 
 a {
@@ -62,8 +59,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 16px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--haze);
 }
 
@@ -71,20 +68,21 @@ a {
   font-family: var(--font-display);
   font-size: 1.75rem;
   letter-spacing: 0.02em;
+  font-weight: 500;
   text-decoration: none;
   color: var(--ink);
 }
 
 .nav {
   display: flex;
-  gap: 0.75rem;
+  gap: 12px;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .nav a {
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 0.95rem;
   transition: color var(--duration-fast) var(--ease-out);
 }
@@ -113,7 +111,7 @@ a {
 }
 
 .nav button.secondary {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 main {
@@ -185,7 +183,7 @@ h1 {
   flex-direction: column;
   gap: 0.35rem;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 label.field:has(> input[type="checkbox"]),
@@ -385,7 +383,7 @@ button.danger,
   flex: 1;
   min-width: 12rem;
   min-height: 1.35em;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--moss-deep);
 }
 
@@ -525,7 +523,7 @@ button.danger,
   color: var(--moss-deep);
   border: none;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .mixer-presets {
@@ -568,7 +566,7 @@ button.danger,
   align-items: center;
   gap: 0.45rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 0.35rem;
 }
 
@@ -588,11 +586,11 @@ button.danger,
 }
 
 .mixer .practice-heading {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.62;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.72;
   margin: 0 0 0.05rem;
 }
 
@@ -602,7 +600,7 @@ button.danger,
   align-items: center;
   gap: 0.3rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .mixer .practice-label {
@@ -1415,20 +1413,7 @@ button.danger:disabled {
   position: relative;
   overflow: hidden;
   border-radius: 4px;
-  background: rgba(26, 31, 28, 0.08);
-}
-
-.sk::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  transform: translateX(-100%);
-  animation: shimmer 1.4s linear infinite;
-}
-
-@keyframes shimmer {
-  to { transform: translateX(100%); }
+  background: rgba(26, 31, 28, 0.1);
 }
 
 .sk-toggle {

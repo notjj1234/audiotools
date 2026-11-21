@@ -431,8 +431,8 @@ export function IsolatePage() {
     <div>
       <h1>Isolate</h1>
       <p className="lede">
-        {HOSTED_FILE_ONLY_NOTE} Pick labeled tracks (Demucs or BS-RoFormer for guitar), an
-        optional section, and a processing mode.
+        {HOSTED_FILE_ONLY_NOTE} Choose stems (Demucs, or BS-RoFormer for guitar), an optional
+        section, and a processing mode. Bleed remains; results vary by song.
       </p>
       <form className="stack" onSubmit={onSubmit}>
         <label className="field">

@@ -45,4 +45,4 @@ export const VOCALS_INSTRUMENTAL_OPTION_ID: TrackOptionId = "vocals_instrumental
 export const DEFAULT_TRACK_OPTIONS: TrackOptionId[] = ["vocals_demucs", "guitar_demucs_6s"];
 
 export const HOSTED_FILE_ONLY_NOTE =
-  "Upload an audio file. YouTube ingest is desktop-only for now.";
+  "Upload an audio file. YouTube ingest is desktop-only.";

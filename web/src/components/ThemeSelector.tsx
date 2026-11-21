@@ -6,29 +6,29 @@ import { useState } from 'react';
 import { Fold } from '../pending';
 
 const TOKEN_GROUPS = {
-  'Base Layers': [
-    { key: '--custom-bg-deepest', label: 'Deepest Background', default: '#0a0f0a' },
-    { key: '--custom-bg-deep', label: 'Panel Background', default: '#141a14' },
-    { key: '--custom-bg-raised', label: 'Raised/Hover Background', default: '#1e261e' },
-    { key: '--custom-bg-highlight', label: 'Active/Highlight Background', default: '#2a342a' },
+  'Base layers': [
+    { key: '--custom-bg-deepest', label: 'Deepest background', default: '#0a0f0a' },
+    { key: '--custom-bg-deep', label: 'Panel background', default: '#141a14' },
+    { key: '--custom-bg-raised', label: 'Raised / hover background', default: '#1e261e' },
+    { key: '--custom-bg-highlight', label: 'Active / highlight background', default: '#2a342a' },
   ],
-  'Text Colors': [
-    { key: '--custom-text-primary', label: 'Primary Text', default: '#e8efe6' },
-    { key: '--custom-text-secondary', label: 'Secondary Text', default: '#9aa0a6' },
-    { key: '--custom-text-muted', label: 'Muted/Disabled Text', default: '#5f6368' },
+  'Text colors': [
+    { key: '--custom-text-primary', label: 'Primary text', default: '#e8efe6' },
+    { key: '--custom-text-secondary', label: 'Secondary text', default: '#9aa0a6' },
+    { key: '--custom-text-muted', label: 'Muted / disabled text', default: '#5f6368' },
   ],
-  'Accent Colors': [
-    { key: '--custom-accent-primary', label: 'Primary Accent (buttons, links)', default: '#2f6b4f' },
-    { key: '--custom-accent-primary-hover', label: 'Primary Accent Hover', default: '#255840' },
-    { key: '--custom-accent-secondary', label: 'Secondary Accent (warnings, solo)', default: '#d4c4a8' },
-    { key: '--custom-accent-secondary-hover', label: 'Secondary Accent Hover', default: '#c4b498' },
-    { key: '--custom-accent-tertiary', label: 'Tertiary Accent (borders, subtle)', default: '#1e4533' },
-    { key: '--custom-accent-tertiary-hover', label: 'Tertiary Accent Hover', default: '#163626' },
+  'Accent colors': [
+    { key: '--custom-accent-primary', label: 'Primary accent (buttons, links)', default: '#2f6b4f' },
+    { key: '--custom-accent-primary-hover', label: 'Primary accent hover', default: '#255840' },
+    { key: '--custom-accent-secondary', label: 'Secondary accent (warnings, solo)', default: '#d4c4a8' },
+    { key: '--custom-accent-secondary-hover', label: 'Secondary accent hover', default: '#c4b498' },
+    { key: '--custom-accent-tertiary', label: 'Tertiary accent (borders, subtle)', default: '#1e4533' },
+    { key: '--custom-accent-tertiary-hover', label: 'Tertiary accent hover', default: '#163626' },
   ],
 } as const;
 
 function CustomThemeBuilder({ customTokens, onChange, onReset }: { customTokens: Record<string, string>; onChange: (key: string, value: string) => void; onReset: () => void }) {
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Accent Colors']);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Accent colors']);
 
   const getValue = (key: string) => customTokens[key] ?? TOKEN_GROUPS[key as keyof typeof TOKEN_GROUPS]?.[0]?.default ?? '';
 
@@ -41,8 +41,8 @@ function CustomThemeBuilder({ customTokens, onChange, onReset }: { customTokens:
 
   return (
     <fieldset style={{ border: '1px solid var(--color-accent-primary)', borderRadius: '8px', padding: '0.75rem', background: 'rgba(47, 107, 79, 0.05)' }}>
-      <legend style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-accent-primary)' }}>
-        Custom Theme Builder
+      <legend style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--color-accent-primary)' }}>
+        Custom theme
       </legend>
       <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', margin: '0 0 0.75rem' }}>
         Adjust any color. Changes apply instantly. <button type="button" onClick={onReset} style={{ color: 'var(--color-accent-primary)', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer' }}>Reset to preset</button>
@@ -128,8 +128,8 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
     <div className="theme-selector" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
       {/* Mode Toggle */}
       <fieldset style={{ border: '1px solid var(--color-border-subtle)', borderRadius: '8px', padding: '0.75rem' }}>
-        <legend style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-          Theme Mode
+        <legend style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+          Theme mode
         </legend>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {(['light', 'dark', 'system'] as const).map(m => (
@@ -156,8 +156,13 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
 
       {/* Preset Grid */}
       <fieldset style={{ border: '1px solid var(--color-border-subtle)', borderRadius: '8px', padding: '0.75rem' }}>
-        <legend style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-          Color Preset {currentPreset.isColorblindSafe && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', background: 'var(--color-accent-secondary)', color: '#000', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>♿ Colorblind-Safe</span>}
+        <legend style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+          Color preset
+          {currentPreset.isColorblindSafe ? (
+            <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--color-text-muted)', fontWeight: 400 }}>
+              colorblind-safe
+            </span>
+          ) : null}
         </legend>
         <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '0.5rem' }}>
           {availablePresets.map(preset => (

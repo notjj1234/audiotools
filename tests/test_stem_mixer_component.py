@@ -1032,6 +1032,40 @@ def test_mixer_practice_restore_cannot_undo_a_local_loop_or_count_in_edit():
     assert "lastPracticeLoopArg = null;\n  lastPracticeCountInArg = null;" in main
 
 
+def test_play_button_is_centered_in_the_transport():
+    """Play sits on the geometric center; Stop left, Restart right."""
+    main = _mixer_main_ts()
+    controls = main[
+        main.find('<div class="mixer-transport-controls">') : main.find(
+            '<label class="mixer-seek">'
+        )
+    ]
+    assert 'class="mixer-transport-before-play"' in controls
+    assert 'class="mixer-transport-after-play"' in controls
+    before_at = controls.find('class="mixer-transport-before-play"')
+    play_at = controls.find('id="btn-playpause"')
+    after_at = controls.find('class="mixer-transport-after-play"')
+    stop_at = controls.find('id="btn-stop"')
+    restart_at = controls.find('id="btn-restart"')
+    assert before_at != -1 and play_at != -1 and after_at != -1
+    assert before_at < stop_at < play_at < after_at < restart_at
+    css = _mixer_src("style.css")
+    rules = css[css.find(".mixer-transport-controls {") :]
+    block = rules[: rules.find("\n}") + 2]
+    assert "grid-template-columns: 1fr auto 1fr" in block
+    assert "width: 100%" in block
+    play = css[css.find("#btn-playpause.live-play {") :]
+    play_block = play[: play.find("\n}") + 2]
+    assert "grid-column: 2" in play_block
+    before = css[css.find(".mixer-transport-before-play {") :]
+    before_block = before[: before.find("\n}") + 2]
+    assert "grid-column: 1" in before_block
+    assert "justify-content: flex-end" in before_block
+    center = css[css.find(".mixer-transport-center {") :]
+    center_block = center[: center.find("\n}") + 2]
+    assert "width: 100%" in center_block
+
+
 def test_mixer_pan_layout_reads_in_words_and_stacks_when_narrow():
     css = _mixer_src("style.css")
     assert '"name vol mute solo pan"' in css

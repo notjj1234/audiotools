@@ -64,10 +64,9 @@ def main() -> None:
     # property of the page, not a failure the user just caused. A red error box
     # that is always present teaches people to ignore red boxes that matter.
     st.warning(
-        "**JJs stuff. NOT A FINISHED PRODUCT.** Tab PDF barely works. "
-        "Tabs are often wrong and unusable. This page is for experimenting. "
-        "Best on short solo-guitar clips. For full songs, isolate guitar first on "
-        "**Audio Isolation**."
+        "**Not a finished product.** Tab PDF barely works — tabs are often wrong "
+        "or unusable. For experimenting on short solo-guitar clips. For full songs, "
+        "isolate guitar first on **Audio Isolation**."
     )
 
     demucs_ok = is_demucs_available()

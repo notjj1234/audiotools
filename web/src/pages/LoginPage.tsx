@@ -36,9 +36,9 @@ export function LoginPage() {
     <div className="login-hero">
       <p className="brand-hero">Audio Tools</p>
       <p className="lede">
-        Sign in to try stem isolation and Tab PDF on the hosted demo. This is an
-        unfinished product — results can be wrong. Processing uses your uploads
-        and account email as described in the Privacy policy.
+        Sign in for stem isolation and Tab PDF on this hosted demo. Unfinished —
+        results can be wrong. Uploads and account email are handled as described
+        in the Privacy policy.
       </p>
       <form className="stack" onSubmit={onSubmit}>
         <label className="field">

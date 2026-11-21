@@ -113,7 +113,7 @@ body {
   color: var(--muted);
   font: inherit;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
   border-radius: 8px 8px 0 0;
