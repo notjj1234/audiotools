@@ -128,17 +128,25 @@ function inline(text: string): ReactNode[] {
           "./THIRD_PARTY_SDKS.md": "/legal/third-party",
         };
         const mapped = internalMap[href];
-        parts.push(
-          <a
-            key={k++}
-            href={mapped ?? href}
-            {...(mapped
-              ? {}
-              : { target: "_blank", rel: "noopener noreferrer" })}
-          >
-            {link[1]}
-          </a>
-        );
+        const safeExternal =
+          !mapped &&
+          (/^https?:\/\//i.test(href) || /^mailto:/i.test(href));
+        const safeHref = mapped ?? (safeExternal ? href : undefined);
+        if (safeHref) {
+          parts.push(
+            <a
+              key={k++}
+              href={safeHref}
+              {...(mapped
+                ? {}
+                : { target: "_blank", rel: "noopener noreferrer" })}
+            >
+              {link[1]}
+            </a>
+          );
+        } else {
+          parts.push(<span key={k++}>{link[1]}</span>);
+        }
       }
     }
     last = m.index + token.length;

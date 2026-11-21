@@ -8,6 +8,14 @@ function readSource(rel: string): string {
   return readFileSync(resolve(webRoot, rel), "utf-8");
 }
 
+describe("auth logout re-bootstrap", () => {
+  it("re-runs bootstrap after logout so demo anon sessions recover", () => {
+    const auth = readSource("src/auth.tsx");
+    expect(auth).toMatch(/await api\.logout\(\);[\s\S]*await bootstrap\(\)/);
+    expect(auth).toContain("}, [bootstrap]");
+  });
+});
+
 describe("App routing (I-601)", () => {
   it("routes /login to the LoginPage component", () => {
     const app = readSource("src/App.tsx");

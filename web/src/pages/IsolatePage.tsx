@@ -170,6 +170,8 @@ export function IsolatePage() {
   const [job, setJob] = useState<api.JobResponse | null>(null);
   const [jobList, setJobList] = useState<api.JobResponse[]>([]);
   const [stopWatch, setStopWatch] = useState<(() => void) | null>(null);
+  const stopWatchRef = useRef(stopWatch);
+  stopWatchRef.current = stopWatch;
   const [clipLabel, setClipLabel] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -203,6 +205,12 @@ export function IsolatePage() {
       return err instanceof Error ? err.message : String(err);
     }
   }, [trackOptions]);
+
+  useEffect(() => {
+    return () => {
+      stopWatchRef.current?.();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -659,10 +667,13 @@ export function IsolatePage() {
                     className="secondary"
                     onClick={() => {
                       stopWatch?.();
+                      setClipLabel(null);
                       setJob(j);
                       if (!["succeeded", "failed", "cancelled"].includes(j.status)) {
                         const stop = api.watchJob(j.id, setJob);
                         setStopWatch(() => stop);
+                      } else {
+                        setStopWatch(null);
                       }
                     }}
                   >

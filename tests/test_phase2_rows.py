@@ -32,6 +32,9 @@ def test_direct_media_url_accepts_a_file_link_and_rejects_the_rest():
     assert not is_direct_media_url("file:///tmp/song.mp3")
     assert not is_direct_media_url("https://localhost/song.wav")
     assert not is_direct_media_url("https://127.0.0.1/song.wav")
+    assert not is_direct_media_url("https://10.0.0.5/song.wav")
+    assert not is_direct_media_url("https://169.254.169.254/latest/song.wav")
+    assert not is_direct_media_url("https://metadata.google.internal/song.wav")
 
 
 def test_download_direct_media_saves_the_bytes(tmp_path: Path):
@@ -45,10 +48,27 @@ def test_download_direct_media_saves_the_bytes(tmp_path: Path):
         def __exit__(self, *args):
             return False
 
-    with patch("urllib.request.urlopen", return_value=FakeResponse()):
+    class FakeOpener:
+        def open(self, request, timeout=60):
+            return FakeResponse()
+
+    with (
+        patch("audio_to_tab.ingest._resolved_ips_safe", return_value=True),
+        patch("urllib.request.build_opener", return_value=FakeOpener()),
+    ):
         path = download_direct_media("https://cdn.example.com/song.wav", tmp_path)
     assert path.name == "song.wav"
     assert path.read_bytes() == b"RIFF"
+
+
+def test_download_direct_media_rejects_private_resolved_host(tmp_path: Path):
+    import pytest
+
+    with (
+        patch("audio_to_tab.ingest._resolved_ips_safe", return_value=False),
+        pytest.raises(ValueError, match="not allowed"),
+    ):
+        download_direct_media("https://cdn.example.com/song.wav", tmp_path)
 
 
 def test_download_direct_media_rejects_a_page(tmp_path: Path):

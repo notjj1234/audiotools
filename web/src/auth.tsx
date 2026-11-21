@@ -78,8 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await api.logout();
-    setEmail(null);
-  }, []);
+    // Re-bootstrap so demo mode mints a fresh anon session (otherwise the
+    // chrome says Anonymous / Sign in with no bearer and uploads 401).
+    await bootstrap();
+  }, [bootstrap]);
 
   return (
     <AuthContext.Provider

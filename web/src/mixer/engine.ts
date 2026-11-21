@@ -708,12 +708,18 @@ export class StemMixerEngine {
     }
   }
 
+  private loadGeneration = 0;
+
   async loadStems(
     stems: StemInfo[],
     onProgress: (loaded: number, total: number, message: string) => void,
     options?: { createContext?: boolean }
   ): Promise<{ errors: string[] }> {
+    const generation = ++this.loadGeneration;
     await this.stopSources(false);
+    if (generation !== this.loadGeneration) {
+      return { errors: [] };
+    }
     this.buffers.clear();
     this.gains.clear();
     this.panners.clear();
@@ -747,20 +753,36 @@ export class StemMixerEngine {
     const total = stems.length;
 
     for (const stem of stems) {
+      if (generation !== this.loadGeneration) {
+        return { errors: [] };
+      }
       onProgress(loaded, total, `Loading ${stem.label}…`);
       try {
         const res = await fetch(stem.url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const arr = await res.arrayBuffer();
+        if (generation !== this.loadGeneration) {
+          return { errors: [] };
+        }
         const buf = await this.ctx.decodeAudioData(arr.slice(0));
+        if (generation !== this.loadGeneration) {
+          return { errors: [] };
+        }
         this.buffers.set(stem.id, buf);
         this.duration = Math.max(this.duration, buf.duration);
         this.addStemBus(this.ctx, stem.id);
       } catch (e) {
+        if (generation !== this.loadGeneration) {
+          return { errors: [] };
+        }
         errors.push(`${stem.label}: ${e instanceof Error ? e.message : String(e)}`);
       }
       loaded += 1;
       onProgress(loaded, total, `Loaded ${loaded}/${total}`);
+    }
+
+    if (generation !== this.loadGeneration) {
+      return { errors: [] };
     }
 
     this.applyGains(

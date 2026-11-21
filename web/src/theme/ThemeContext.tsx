@@ -18,6 +18,20 @@ const ThemeContext = createContext<ThemeState | null>(null);
 
 const STORAGE_KEY = 'audiotools-theme';
 
+/** Map semantic --color-* tokens to --custom-* slots expected by design-tokens.css. */
+export function colorTokenToCustomVar(key: string): string {
+  if (key.startsWith('--custom-')) return key;
+  if (key.startsWith('--color-')) return `--custom-${key.slice('--color-'.length)}`;
+  if (key.startsWith('--')) return `--custom-${key.slice(2)}`;
+  return key;
+}
+
+function modeFromPresetId(id: string): 'light' | 'dark' | null {
+  if (id.endsWith('-light') || id.includes('-light-')) return 'light';
+  if (id.endsWith('-dark') || id.includes('-dark-')) return 'dark';
+  return null;
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [presetId, setPresetId] = useState(DEFAULT_PRESET_ID);
   const [mode, setMode] = useState<'light' | 'dark' | 'system'>('system');
@@ -53,25 +67,46 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const preset = THEME_PRESETS.find(p => p.id === presetId) ?? THEME_PRESETS[0];
     
     root.setAttribute('data-accent', preset.accentId);
-    root.setAttribute('data-theme', mode === 'system' 
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : mode);
-    
-    // Apply custom tokens
-    Object.entries(customTokens).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
+
+    const applyThemeAttr = () => {
+      root.setAttribute(
+        'data-theme',
+        mode === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : mode
+      );
+    };
+    applyThemeAttr();
+
+    // Drop previous inline custom vars so leftover custom colors cannot override presets.
+    Array.from(root.style)
+      .filter((name) => name.startsWith('--custom-'))
+      .forEach((name) => root.style.removeProperty(name));
+
+    if (preset.accentId === 'custom') {
+      Object.entries(customTokens).forEach(([key, value]) => {
+        root.style.setProperty(key, value);
+      });
+    }
+
+    if (mode !== 'system') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => applyThemeAttr();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, [presetId, mode, customTokens, hydrated]);
 
   const currentPreset = THEME_PRESETS.find(p => p.id === presetId) ?? THEME_PRESETS[0];
 
   const setPreset = (id: string) => {
     setPresetId(id);
+    const fromName = modeFromPresetId(id);
+    if (fromName) setMode(fromName);
+
     if (id === 'custom') {
       // Initialize custom tokens from current preset
       const preset = THEME_PRESETS.find(p => p.id === presetId);
       if (preset && preset.accentId !== 'custom') {
-        // Copy current computed values to custom slots
         const computed = getComputedStyle(document.documentElement);
         const newCustom: Record<string, string> = {};
         [
@@ -82,10 +117,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           '--color-text-primary', '--color-text-secondary', '--color-text-muted'
         ].forEach(key => {
           const val = computed.getPropertyValue(key).trim();
-          if (val) newCustom[key.replace('--', '--custom-')] = val;
+          if (val) newCustom[colorTokenToCustomVar(key)] = val;
         });
         setCustomTokens(newCustom);
       }
+    } else {
+      // Leaving Custom: clear so --custom-* inline vars cannot override accents.
+      setCustomTokens({});
     }
   };
 

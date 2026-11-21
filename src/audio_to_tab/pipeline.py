@@ -78,7 +78,10 @@ class PipelineConfig:
     beats_per_measure: int = 4
 
     def __post_init__(self) -> None:
-        if self.demucs_quality not in ("fast", "balanced", "best"):
+        # API / isolate / CLI use fast|balanced|high|extreme. Legacy "best" → high.
+        if self.demucs_quality == "best":
+            self.demucs_quality = "high"
+        if self.demucs_quality not in ("fast", "balanced", "high", "extreme"):
             raise ValueError(f"Invalid demucs_quality: {self.demucs_quality!r}")
         if self.beats_per_measure <= 0:
             raise ValueError(f"beats_per_measure must be positive, got {self.beats_per_measure}")
