@@ -119,7 +119,11 @@ export function RegionPicker({
     regions.on("region-updated", (region) => {
       if (suppressingRef.current || region.id !== "selection") return;
       onChangeRef.current(region.start, region.end);
-      region.play(true);
+      // Match desktop: only restart playback when already playing (do not
+      // auto-start on every drag/resize).
+      if (ws.isPlaying()) {
+        region.play(true);
+      }
     });
 
     return () => {

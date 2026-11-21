@@ -274,6 +274,12 @@ export function IsolatePage() {
     if (duration === null && useRegion) setUseRegion(false);
   }, [duration, useRegion]);
 
+  useEffect(() => {
+    return () => {
+      stopWatch?.();
+    };
+  }, [stopWatch]);
+
   function onAudioMeta() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -659,10 +665,13 @@ export function IsolatePage() {
                     className="secondary"
                     onClick={() => {
                       stopWatch?.();
+                      setClipLabel(null);
                       setJob(j);
                       if (!["succeeded", "failed", "cancelled"].includes(j.status)) {
                         const stop = api.watchJob(j.id, setJob);
                         setStopWatch(() => stop);
+                      } else {
+                        setStopWatch(null);
                       }
                     }}
                   >

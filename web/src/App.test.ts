@@ -22,6 +22,12 @@ describe("App routing (I-601)", () => {
     expect(app).toContain("handleAuthClick");
   });
 
+  it("logout re-bootstraps an anonymous session after clearing the token", () => {
+    const auth = readSource("src/auth.tsx");
+    expect(auth).toMatch(/logout[\s\S]*await api\.logout\(\)/);
+    expect(auth).toMatch(/logout[\s\S]*await bootstrap\(\)/);
+  });
+
   it("leaves the Sign in control on screen when anonymous sessions are off", () => {
     const app = readSource("src/App.tsx");
     expect(app).toContain("sessionError !== ANON_SESSION_UNAVAILABLE");

@@ -79,7 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.logout();
     setEmail(null);
-  }, []);
+    // Token is cleared; re-bootstrap so demo/anon mode keeps uploads working
+    // instead of showing "Anonymous" with a dead session (401 on every job).
+    await bootstrap();
+  }, [bootstrap]);
 
   return (
     <AuthContext.Provider
