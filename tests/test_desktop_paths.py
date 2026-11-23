@@ -359,7 +359,10 @@ def test_server_role_passes_loopback_flags_to_streamlit(tmp_path, monkeypatch):
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
 
     import streamlit.web as streamlit_web
+    from streamlit.runtime.pages_manager import PagesManager
 
+    monkeypatch.setattr(sys, "argv", sys.argv.copy())
+    monkeypatch.setattr(PagesManager, "uses_pages_directory", None)
     captured: dict[str, list[str]] = {}
 
     def fake_main():
@@ -431,11 +434,12 @@ def test_launch_shell_html_is_only_the_window_wash():
     assert "prefers-reduced-motion" not in dark
 
 
-def test_server_skips_pages_directory_nav_before_streamlit_starts(monkeypatch):
+def test_server_skips_pages_directory_nav_before_streamlit_starts(tmp_path, monkeypatch):
     """Filename sidebar is Streamlit's pages/ mode, published before app.py runs."""
     launcher = _load_launcher()
     from streamlit.runtime.pages_manager import PagesManager
 
+    monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
     previous = PagesManager.uses_pages_directory
     PagesManager.uses_pages_directory = None
     seen: dict[str, object] = {}
