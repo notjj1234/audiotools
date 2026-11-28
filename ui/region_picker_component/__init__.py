@@ -54,13 +54,15 @@ def region_picker(
     duration_sec: float | None = None,
     max_hint_sec: float | None = None,
     theme_vars: dict[str, str] | None = None,
+    revision: int = 0,
     key: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Render a waveform with one draggable in/out region.
 
-    Returns ``{startSec, endSec}`` after the user finishes dragging, or None
-    before the first report.
+    Returns ``{startSec, endSec, revision}`` after the user finishes dragging, or
+    None before the first report. Bump ``revision`` when the host moves the
+    region itself; a report carrying an older revision is stale.
 
     ``theme_vars`` (optional): CSS custom properties for theming the iframe.
     Pass the result of ``get_iframe_theme_vars()`` from isolate_state.
@@ -78,6 +80,7 @@ def region_picker(
         durationSec=None if duration_sec is None else float(duration_sec),
         maxHintSec=None if max_hint_sec is None else float(max_hint_sec),
         themeVars=theme_vars or {},
+        revision=int(revision),
         key=key,
         default=None,
     )

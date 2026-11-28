@@ -77,6 +77,33 @@ def stem_media_urls(stem_paths: dict[str, Path], *, coord_prefix: str = "isolate
     return urls
 
 
+def media_stamps(stem_paths: dict[str, Path]) -> dict[str, int]:
+    """``{stem_id: mtime_ns}``; -1 for a file that cannot be stat'ed."""
+    stamps: dict[str, int] = {}
+    for name, path in stem_paths.items():
+        try:
+            stamps[name] = Path(path).stat().st_mtime_ns
+        except OSError:
+            stamps[name] = -1
+    return stamps
+
+
+def stems_changed_since(
+    stem_paths: dict[str, Path], registered: dict[str, int]
+) -> dict[str, Path]:
+    """Stems whose file changed after ``registered`` stamps were taken.
+
+    Registering a path makes Streamlit read and hash the whole file, so a
+    fragment pass re-registers only what really changed (a rebaked click).
+    """
+    current = media_stamps(stem_paths)
+    return {
+        name: path
+        for name, path in stem_paths.items()
+        if registered.get(name) != current[name]
+    }
+
+
 def register_mixer_media(stem_paths: dict[str, Path]) -> tuple[dict[str, str], dict[str, str]]:
     """Register playback + download stem URLs during the full page run.
 

@@ -157,12 +157,15 @@ def score_clip(
     if sibling.exists() and audio_path.name != "guitar.wav":
         guitar = sibling
 
+    vocals_raw = entry.get("vocals")
+    vocals = _resolve_path(vocals_raw, clips_dir) if vocals_raw else None
     extra, diag = split_lead_rhythm_guitar(
         guitar,
         out,
         use_basic_pitch=use_basic_pitch,
         thresholds=thr,
         emit_mode=emit_mode,  # type: ignore[arg-type]
+        vocals_path=vocals if vocals is not None and vocals.exists() else None,
     )
     elapsed = time.perf_counter() - t0
     emitted = "lead_guitar" in extra and "rhythm_guitar" in extra

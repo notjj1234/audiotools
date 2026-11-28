@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import streamlit as st
@@ -208,25 +209,6 @@ def _youtube_search_dialog() -> None:
                 type="primary",
                 width="stretch",
             )
-    secondary = st.columns([1, 1, 4], vertical_alignment="center")
-    with secondary[0]:
-        if st.button(
-            "Clear",
-            key="yt_audio_search_clear",
-            type="secondary",
-            width="stretch",
-        ):
-            _clear_search_results()
-            st.rerun()
-    with secondary[1]:
-        if st.button(
-            "Close",
-            key="yt_audio_search_close",
-            type="secondary",
-            width="stretch",
-        ):
-            _close_search_dialog()
-            st.rerun()
     if do_search:
         _run_search(search_q, page=1)
     search_error = st.session_state.get(YT_AUDIO_SEARCH_ERROR_KEY)
@@ -241,7 +223,19 @@ def _youtube_search_dialog() -> None:
         hits_state = []
     busy = bool(downloading_title)
     if hits_state:
-        st.caption(result_range_caption(page, len(hits_state)))
+        # Close lives in the dialog's X; Clear only matters once there are results.
+        head = st.columns([5, 1], vertical_alignment="center")
+        with head[0]:
+            st.caption(result_range_caption(page, len(hits_state)))
+        with head[1]:
+            if st.button(
+                "Clear",
+                key="yt_audio_search_clear",
+                type="tertiary",
+                width="stretch",
+            ):
+                _clear_search_results()
+                st.rerun()
         for hit in hits_state:
             if not isinstance(hit, dict):
                 continue
@@ -251,7 +245,8 @@ def _youtube_search_dialog() -> None:
             url = str(hit.get("url") or "").strip()
             thumb = str(hit.get("thumbnail_url") or "").strip()
             meta = meta_line(hit, duration_label=dur)
-            row = st.columns([1.5, 3.2, 1.3], vertical_alignment="center")
+            # First column just fits the 168px thumbnail, so the title sits beside it.
+            row = st.columns([1, 3.7, 1.3], vertical_alignment="center")
             with row[0]:
                 if thumb:
                     st.image(thumb, width=168)
@@ -259,11 +254,16 @@ def _youtube_search_dialog() -> None:
                 st.markdown(f"**{title}**")
                 if meta:
                     st.caption(meta)
+                # In-app YouTube playback is often blocked for official uploads,
+                # so the preview is a plain link rather than an embed.
+                if url:
+                    st.markdown(f"[Open on YouTube]({url})")
             with row[2]:
+                # Search is the dialog's one primary action; per-row Use is secondary.
                 if st.button(
                     "Use",
                     key=f"yt_audio_pick_p{page}_{vid}",
-                    type="primary",
+                    type="secondary",
                     disabled=not url or busy,
                     width="stretch",
                     help="Download this track and prepare to save it to a folder.",
@@ -287,22 +287,6 @@ def _youtube_search_dialog() -> None:
                             )
                     _close_search_dialog()
                     st.rerun()
-            with st.expander(
-                "Preview",
-                expanded=False,
-                key=f"yt_audio_preview_p{page}_{vid}",
-            ):
-                if url:
-                    if thumb:
-                        st.image(thumb, use_container_width=True)
-                    st.caption(
-                        "In-app YouTube playback is often blocked for official music "
-                        "uploads. Open the video on YouTube, or click **Use** to fill "
-                        "the URL."
-                    )
-                    st.markdown(f"[Open on YouTube]({url})")
-                else:
-                    st.caption("No preview URL for this result.")
     if hits_state or page > 1:
         nav = st.columns([1, 2, 1], vertical_alignment="center")
         with nav[0]:
@@ -319,7 +303,7 @@ def _youtube_search_dialog() -> None:
                 )
                 st.rerun()
         with nav[1]:
-            st.caption(result_range_caption(page, len(hits_state)))
+            st.caption(result_range_caption(page, len(hits_state)), text_alignment="center")
         with nav[2]:
             if st.button(
                 "Next",
@@ -383,11 +367,12 @@ def _run_save_flow(url: str, fmt: str, *, already_staged: Path | None) -> None:
 
 def main() -> None:
     pro = is_pro_mode(st.session_state)
+    switch_keys = "Cmd+Tab" if sys.platform == "darwin" else "Alt+Tab"
     title_help = (
         "Download audio from a public YouTube link and save it to a folder "
         "(MP3 by default; WAV/FLAC/etc. also available). "
         "This page does not separate stems — use Audio Isolation for that. "
-        "If the folder window is hidden, Alt+Tab. Saving overwrites a same-named file."
+        f"If the folder window is hidden, {switch_keys}. Saving overwrites a same-named file."
     ) if pro else None
     st.title(
         "YouTube to MP3",
@@ -399,7 +384,7 @@ def main() -> None:
     st.caption(
         "Saves audio to a folder only — it does not separate stems "
         "(use **Audio Isolation** for that). "
-        "If the folder window is hidden, Alt+Tab. "
+        f"If the folder window is hidden, {switch_keys}. "
         "Saving overwrites a same-named file."
     )
 

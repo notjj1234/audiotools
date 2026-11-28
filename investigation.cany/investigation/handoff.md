@@ -1,0 +1,3 @@
+# Handoff
+
+2026-11-26: Answered "how does Moises separate stems". Found: Mac Moises.app 2.1.0 has no AI models; main/index.js loads https://studio.moises.ai (?client=desktop); Play 'new' = /upload/split/3, so splitting happens server-side (finding 2 inferred). Server model/method unknown from the app. Extracted asar at /var/folders/.../craft-anything-extract-c0fd1ace79e698b2; pretty main at /var/folders/.../moises-main-restored/pretty/index.js. Next (optional, needs user approval): js_electron_walkthrough_record with network capture on a song the user owns, to see upload and stem download calls. Do not upload private audio, do not clone Moises. Earlier lead/rhythm handoff notes still apply (real-song quality unverified; /tmp/lr_probe/timeit.py shadows stdlib).

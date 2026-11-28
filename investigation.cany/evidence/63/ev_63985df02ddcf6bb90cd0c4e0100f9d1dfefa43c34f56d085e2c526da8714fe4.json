@@ -1,0 +1,84 @@
+{
+  "id": "ev_63985df02ddcf6bb90cd0c4e0100f9d1dfefa43c34f56d085e2c526da8714fe4",
+  "subject": {
+    "kind": "directory",
+    "sha256": "0b933fc1ea221420d900730c57d44944ed9c8c641e4ec14d4e03794da7961c41",
+    "name": "Moises.app"
+  },
+  "operation": "core_evidence_browse",
+  "params": {
+    "show": {
+      "field_names": true,
+      "kind": "rows",
+      "limit": 3,
+      "list": "entries"
+    },
+    "source": {
+      "evidence_id": "ev_f85ef022bb3cab5d7612598a989bcce0addef93b888312ae4b4286410d93f709",
+      "kind": "saved"
+    }
+  },
+  "result": {
+    "coverage": {
+      "at_end": false,
+      "examined": 3,
+      "next_offset": 3,
+      "status": "page",
+      "total": 300
+    },
+    "from_evidence": "ev_f85ef022bb3cab5d7612598a989bcce0addef93b888312ae4b4286410d93f709",
+    "from_tool": "core_archive_show",
+    "shown": {
+      "field_names": [
+        "depth",
+        "kind",
+        "path",
+        "role",
+        "size"
+      ],
+      "items": [
+        {
+          "depth": 0,
+          "kind": "directory",
+          "path": "Contents",
+          "size": 0
+        },
+        {
+          "depth": 0,
+          "kind": "directory",
+          "path": "Contents/Frameworks",
+          "size": 0
+        },
+        {
+          "depth": 0,
+          "kind": "directory",
+          "path": "Contents/MacOS",
+          "size": 0
+        }
+      ],
+      "list": "entries",
+      "offset": 0,
+      "total": 300
+    }
+  },
+  "summary": "Part of core_archive_show evidence (page).",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [],
+  "coverage": {
+    "status": "partial",
+    "examined": 3,
+    "total": 300,
+    "next_offset": 3
+  },
+  "locations": [],
+  "links": [
+    "ev_f85ef022bb3cab5d7612598a989bcce0addef93b888312ae4b4286410d93f709"
+  ]
+}

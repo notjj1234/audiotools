@@ -1021,6 +1021,17 @@ def current_setup_step(session: Mapping[str, Any]) -> str:
     return SETUP_STEP_SOURCE
 
 
+def auto_advance_mark(*, pending_fp: str, tab: str) -> str:
+    """Per tab and file: the same song dropped into a new tab advances again."""
+    return f"{tab}|{pending_fp}"
+
+
+def should_auto_advance_upload(*, pending_fp: str, advanced_fp: object, tab: str = "") -> bool:
+    """True the first time a staged upload is ready in this tab. Back keeps the
+    user on the source step because the same file has already advanced here."""
+    return bool(pending_fp) and auto_advance_mark(pending_fp=pending_fp, tab=tab) != advanced_fp
+
+
 def setup_continue_enabled(
     *,
     download_in_progress: bool,
@@ -2216,6 +2227,9 @@ def open_opened_audio_tab(
         "isolate_pending_fp": fingerprint,
         "isolate_upload_fp": fingerprint,
         ISOLATE_OUTPUT_NAME_PENDING_KEY: str(title or "").strip(),
+        # Straight to Choose, like a dropped file (I-635): the file is already
+        # picked, so a Drop screen with Continue was a dead extra click.
+        SETUP_STEP_KEY: SETUP_STEP_SEPARATE,
     }
     if video_path:
         snap["isolate_pending_video_path"] = str(video_path)
@@ -2649,6 +2663,91 @@ def sync_demucs_compute_defaults(
         session["isolate_low_end_restore_db"] = 0.0
 
 
+# --- Lead / Rhythm guitar split (REVIEW_AND_PLAN.md LR-3 / LR-4) -------------
+
+# 4-stem models keep guitar inside "other": no guitar stem to split.
+LEAD_RHYTHM_FOUR_STEM_MODELS = frozenset({"htdemucs", "htdemucs_ft"})
+LEAD_RHYTHM_STEMS = ("lead_guitar", "rhythm_guitar")
+LEAD_RHYTHM_VIEW_SPLIT = "split"
+LEAD_RHYTHM_VIEW_COMBINED = "combined"
+LEAD_RHYTHM_TOGGLE_LABEL = "Split lead and rhythm guitar"
+LEAD_RHYTHM_TOGGLE_HELP = (
+    "After the guitar is isolated, try to split it into Lead and Rhythm using when "
+    "each part plays (solos usually come while nobody sings) and where each guitar "
+    "sits in the mix. No extra download. Whenever two guitar parts are found you "
+    "get Lead and Rhythm; if it isn't sure which is the lead, the labels are a best "
+    "guess and the mixer has a Swap button. Only a single guitar part stays one "
+    "Guitar track, and the mixer says why."
+)
+
+
+def lead_rhythm_supported(
+    model: str | None,
+    *,
+    two_stems: str | None = None,
+    emit_stems: Iterable[str] | None = None,
+) -> bool:
+    """The split only needs a guitar stem, whichever engine produced it."""
+    if two_stems:
+        return False
+    if str(model or "") in LEAD_RHYTHM_FOUR_STEM_MODELS:
+        return False
+    if emit_stems is not None and "guitar" not in {str(x) for x in emit_stems}:
+        return False
+    return True
+
+
+def has_lead_rhythm_stems(stem_paths: Mapping[str, Any]) -> bool:
+    return all(name in stem_paths for name in LEAD_RHYTHM_STEMS)
+
+
+def mixer_stems_for_view(
+    stem_paths: Mapping[str, Any], view: str | None = None
+) -> dict[str, Any]:
+    """
+    Which stems the mixer shows. Lead + Rhythm add back up to the Guitar stem, so
+    showing all three would play the guitar twice: show the pair (default) or
+    the single combined Guitar.
+    """
+    paths = dict(stem_paths)
+    if not has_lead_rhythm_stems(paths):
+        return paths
+    if view == LEAD_RHYTHM_VIEW_COMBINED and "guitar" in paths:
+        hidden = set(LEAD_RHYTHM_STEMS)
+    else:
+        hidden = {"guitar"}
+    return {name: path for name, path in paths.items() if name not in hidden}
+
+
+def guitar_split_notice(diag: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """
+    Plain message for the mixer from ``guitar_split_diagnostics.json``.
+
+    Returns ``{"level": "success"|"warning"|"info", "text", "split",
+    "low_confidence", "code"}`` or None when no split was tried. Older (v1)
+    diagnostics without ``reason_code`` are mapped too.
+    """
+    if not diag:
+        return None
+    from audio_to_tab.lead_rhythm import infer_reason_code, user_message_for
+
+    outcome = str(diag.get("outcome") or "")
+    method = str(diag.get("method") or "none")
+    code = str(diag.get("reason_code") or "") or infer_reason_code(
+        outcome,
+        method,
+        forced_emit=bool(diag.get("forced_emit")),
+        low_confidence=bool(diag.get("low_confidence")),
+    )
+    text = str(diag.get("user_message") or "") or user_message_for(
+        code, method=method, features=diag.get("features") or {}
+    )
+    split = code in ("split", "split_low_confidence", "split_labels_unsure")
+    low = code in ("split_low_confidence", "split_labels_unsure")
+    level = "warning" if low else ("success" if split else "info")
+    return {"level": level, "text": text, "split": split, "low_confidence": low, "code": code}
+
+
 def resolve_pro_engine_job_fields(
     session: Mapping[str, Any],
     *,
@@ -2660,6 +2759,7 @@ def resolve_pro_engine_job_fields(
     fold_other_into_guitar: bool,
     fold_other_mode: str,
     roformer_available: bool = True,
+    lead_rhythm_allowed: bool | None = None,
 ) -> dict[str, Any]:
     """Lite keeps IsolateConfig defaults. Pro reads Engine widget keys.
 
@@ -2684,10 +2784,16 @@ def resolve_pro_engine_job_fields(
         "lead_rhythm": False,
         "lead_rhythm_mode": "confident",
     }
+    if lead_rhythm_allowed is None:
+        lead_rhythm_allowed = lead_rhythm_supported(resolved_model, two_stems=two_stems)
+    # Opt-in in both Lite and Pro; off unless the person ticks the box. Ticking
+    # it means "I want Lead and Rhythm": split whenever two parts are found,
+    # even if which is the lead is a best guess (prefer_split).
+    if lead_rhythm_allowed and bool(session.get("isolate_lead_rhythm")):
+        out["lead_rhythm"] = True
+        out["lead_rhythm_mode"] = "prefer_split"
     if not is_pro:
         return out
-    if resolved_model == "htdemucs_6s" and bool(session.get("isolate_lead_rhythm")):
-        out["lead_rhythm"] = True
     if resolved_model == "htdemucs" and bool(session.get("isolate_htdemucs_ft")):
         out["model"] = "htdemucs_ft"
     out["demucs_shifts"] = parse_demucs_shifts(session.get("isolate_demucs_shifts"))
@@ -3553,12 +3659,36 @@ def checklist_items(
     return items
 
 
+CHECKLIST_MARKS = {
+    "done": ":material/check_circle:",
+    "current": ":material/radio_button_checked:",
+    "pending": ":material/radio_button_unchecked:",
+}
+
+
+def _merge_checklist_rows(items: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Collapse neighbouring sub-stages that share a label (collect, presence,
+    bass_bleed all read "Separate tracks"), so one step shows once."""
+    merged: list[dict[str, str]] = []
+    for item in items:
+        if merged and merged[-1]["label"] == item["label"]:
+            states = {merged[-1]["state"], item["state"]}
+            if "current" in states:
+                merged[-1]["state"] = "current"
+            elif states == {"done"}:
+                merged[-1]["state"] = "done"
+            else:
+                merged[-1]["state"] = "pending" if "done" not in states else "current"
+            continue
+        merged.append(dict(item))
+    return merged
+
+
 def format_checklist_markdown(items: list[dict[str, str]]) -> str:
     """Plain-text checklist that does not rely on clickable Streamlit widgets."""
-    marks = {"done": "[done]", "current": "[now]", "pending": "[todo]"}
     lines = []
-    for item in items:
-        mark = marks.get(item["state"], "[todo]")
+    for item in _merge_checklist_rows(items):
+        mark = CHECKLIST_MARKS.get(item["state"], CHECKLIST_MARKS["pending"])
         label = item["label"]
         if item["state"] == "current":
             lines.append(f"{mark} **{label}**")
@@ -4038,14 +4168,19 @@ _THEME_SHELL_CSS = """
 }
 [data-testid="stMarkdownContainer"],
 [data-testid="stMarkdownContainer"] p,
-[data-testid="stHeading"],
-[data-testid="stHeading"] h1,
-[data-testid="stHeading"] h2,
-[data-testid="stHeading"] h3,
-[data-testid="stCaptionContainer"],
 [data-testid="stWidgetLabel"],
 [data-testid="stWidgetLabel"] p {
   color: var(--color-text-primary) !important;
+}
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+  color: var(--color-text-muted, var(--color-text-primary)) !important;
+}
+[data-testid="stHeading"],
+[data-testid="stHeading"] h1,
+[data-testid="stHeading"] h2,
+[data-testid="stHeading"] h3 {
+  color: var(--color-text-heading, var(--color-text-primary)) !important;
 }
 [data-testid="stTextInput"] input,
 [data-testid="stTextArea"] textarea,

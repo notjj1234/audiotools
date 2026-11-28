@@ -49,8 +49,9 @@ def test_sidebar_chord_shows_accuracy_disclaimer_under_the_diagram():
     card = isolate[isolate.find("_SIDEBAR_CHORD_HTML") : isolate.find("def _render_sidebar_chord")]
     assert 'class="att-sidebar-chord-disclaimer"' in card
     assert "Not reliable" in card
-    assert "2–3 of every 10" in card or "2-3 of every 10" in card
-    assert "rough guide" in card.lower()
+    # The old "2–3 of every 10" figure had no measured source; no number is claimed.
+    assert "of every 10" not in card
+    assert "Rough guide. Chord names can be wrong." in card
     assert "😀" not in card and "⚠️" not in card and "✨" not in card
     diagram_at = card.find('class="att-sidebar-chord-diagram"')
     disclaimer_at = card.find('class="att-sidebar-chord-disclaimer"')

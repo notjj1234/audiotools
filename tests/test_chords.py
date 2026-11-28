@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pytest
 import soundfile as sf
@@ -199,7 +201,8 @@ def test_maj7_prior_beats_overtone_template(tmp_path):
     assert all(event.symbol == "C" for event in events)
 
 
-def test_sounded_major_seventh_stays(tmp_path):
+def test_sounded_major_seventh_names_the_root(tmp_path):
+    """A Cmaj7 voicing is shown as C: the product names only root + optional m."""
     y = _tone(
         2.0,
         (261.63, 0.18),
@@ -212,10 +215,10 @@ def test_sounded_major_seventh_stays(tmp_path):
     sf.write(path, y, SR)
     events = detect_chords(path, beats=tuple(i * 0.5 for i in range(5)), bpm=120.0, provisional_key="C")
     assert events
-    assert events[0].symbol.startswith("Cmaj7")
+    assert events[0].symbol == "C"
 
 
-def test_voiced_dominant_seventh_stays(tmp_path):
+def test_voiced_dominant_seventh_names_the_root(tmp_path):
     y = _tone(
         2.0,
         (261.63, 0.18),
@@ -227,10 +230,10 @@ def test_voiced_dominant_seventh_stays(tmp_path):
     sf.write(path, y, SR)
     events = detect_chords(path, beats=tuple(i * 0.5 for i in range(5)), bpm=120.0, provisional_key="C")
     assert events
-    assert events[0].symbol.startswith("C7")
+    assert events[0].symbol == "C"
 
 
-def test_voiced_minor_seventh_stays(tmp_path):
+def test_voiced_minor_seventh_keeps_the_minor(tmp_path):
     y = _tone(
         2.0,
         (261.63, 0.18),
@@ -242,23 +245,20 @@ def test_voiced_minor_seventh_stays(tmp_path):
     sf.write(path, y, SR)
     events = detect_chords(path, beats=tuple(i * 0.5 for i in range(5)), bpm=120.0, provisional_key="C")
     assert events
-    assert events[0].symbol.startswith("Cm7")
+    assert events[0].symbol == "Cm"
 
 
-def test_smeared_window_keeps_seventh_prior():
+def test_templates_are_major_and_minor_triads_with_a_flat_prior():
+    assert len(_TEMPLATE_NAMES) == 24
+    assert all(re.fullmatch(r"[A-G]#?m?", name) for name in _TEMPLATE_NAMES)
+    assert set(_QUALITY_PRIOR) == {"maj", "min"}
     chroma = np.ones(12, dtype=np.float64)
     chroma[0] = chroma[4] = chroma[7] = chroma[11] = 1.2
-    prior = _quality_prior_for_window(chroma)
-    maj7_index = _TEMPLATE_NAMES.index("Cmaj7")
-    seven_index = _TEMPLATE_NAMES.index("C7")
-    assert float(prior[maj7_index]) == pytest.approx(_QUALITY_PRIOR["maj7"])
-    assert float(prior[seven_index]) == pytest.approx(_QUALITY_PRIOR["7"])
-    assert float(prior[seven_index]) > 0.0
-    assert float(prior[seven_index]) != pytest.approx(0.05)
+    assert np.allclose(_quality_prior_for_window(chroma), 0.0)
 
 
-def test_powerchord_without_a_third_stays_a_fifth(tmp_path):
-    """Root + fifth, no third, must stay C5. A 0.70 prior was naming it C."""
+def test_powerchord_without_a_third_is_the_plain_root(tmp_path):
+    """Root + fifth, no third, is shown as C (never C5 or Cm)."""
     y = _tone(2.0, (130.81, 0.25), (196.00, 0.18))
     path = tmp_path / "c5.wav"
     sf.write(path, y, SR)
@@ -269,7 +269,7 @@ def test_powerchord_without_a_third_stays_a_fifth(tmp_path):
         provisional_key="C",
     )
     assert events
-    assert all(event.symbol.split("/")[0] == "C5" for event in events)
+    assert all(event.symbol == "C" for event in events)
 
 
 def test_bass_non_chord_tone_does_not_rename_the_root(tmp_path):
@@ -290,7 +290,7 @@ def test_bass_non_chord_tone_does_not_rename_the_root(tmp_path):
     assert all(event.symbol.split("/")[0].startswith("C") for event in events)
 
 
-def test_bass_third_may_slash_but_does_not_become_the_root(tmp_path):
+def test_bass_third_neither_slashes_nor_becomes_the_root(tmp_path):
     guitar = _tone(2.0, (261.63, 0.20), (329.63, 0.16), (392.00, 0.14))
     bass = _tone(2.0, (82.41, 0.5))
     guitar_path = tmp_path / "guitar.wav"
@@ -305,8 +305,7 @@ def test_bass_third_may_slash_but_does_not_become_the_root(tmp_path):
         bass_path=bass_path,
     )
     assert events
-    assert any(event.symbol == "C/E" for event in events)
-    assert all(not event.symbol.startswith("E") for event in events)
+    assert all(event.symbol == "C" for event in events)
 
 
 def test_short_flicker_is_merged():
@@ -424,4 +423,16 @@ def test_detect_chords_passes_beats_to_btc(tmp_path, monkeypatch):
     assert captured["beats"] == beats
     assert captured["downbeats"] == downbeats
     assert captured["beats_per_measure"] == 4
-    assert captured["bass_path"] == path
+    # BTC no longer reads the bass stem: it was only used for slash chords.
+    assert "bass_path" not in captured
+
+
+def test_every_detected_name_is_a_root_with_an_optional_m(tmp_path):
+    """Product contract: F, F#, F#m, or N. No sevenths, suspensions, fifths, slashes, flats."""
+    path = tmp_path / "progression.wav"
+    _write_progression(path, ("C", "F", "G", "C"))
+    events = detect_chords(path, beats=tuple(i * 0.5 for i in range(17)), bpm=120.0)
+    assert events
+    for event in events:
+        for name in (event.symbol, event.simple, event.medium):
+            assert re.fullmatch(r"[A-G]#?m?|N", name), name

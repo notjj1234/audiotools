@@ -74,6 +74,7 @@ from ui.isolate_state import (
     estimate_remaining_seconds,
     estimated_stage_seconds,
     expects_guitar_stem,
+    CHECKLIST_MARKS,
     format_checklist_markdown,
     format_elapsed,
     format_eta_line,
@@ -552,7 +553,8 @@ def test_pro_machine_panel_is_inside_outcome_fragment_only():
     assert "_render_engine_panel(" in picker
     assert picker.find("_render_engine_panel(") < picker.find("_render_machine_panel(")
     assert "_isolate_machine_panel_drawn" in machine
-    assert 'key="isolate_machine_expanded"' in machine
+    # I-635: a flat section inside Advanced (expanders cannot nest).
+    assert 'key="isolate_machine_section"' in machine
 
 
 def test_persisted_settings_include_lite_run_on():
@@ -786,7 +788,9 @@ def test_isolate_headings_disable_anchors_and_tiles_use_fragment_rerun():
     ).read_text(encoding="utf-8")
     assert 'anchor=False, help=PAGE_TITLE_HELP' in source
     assert "SEPARATE_TRACKS_HELP" in source
-    assert 'st.subheader("Downloads", anchor=False, help=DOWNLOADS_HELP)' in source
+    # I-635: downloads fold under the mixer as one Export disclosure.
+    assert '_stateful_expander("Export", key="isolate_export_expanded", default=False)' in source
+    assert "st.caption(DOWNLOADS_HELP)" in source
     assert "SECTION_OPTIONAL_HELP" in source
     assert "@st.fragment" in source
     assert 'st.rerun(scope="fragment")' in source
@@ -826,10 +830,21 @@ def test_lite_new_cta_captions_chosen_outcome_and_source():
     assert "SETUP_STEP_SEPARATE" in new_ws
     assert new_ws.find("SETUP_STEP_SEPARATE") < new_ws.find('key="isolate_separate"')
     assert "_try_enqueue_choice(choice)" in new_ws
-    assert "OUTCOME_CARD_KEY" in new_ws
     assert "_has_source_for_job(choice)" in new_ws
     assert "disabled=not demucs_ok or not has_source" in new_ws
-    assert "Custom ·" in new_ws
+    # Sticky bar holds Back beside Separate (I-635).
+    assert 'key="isolate_separate_bar"' in new_ws
+    assert new_ws.find('key="isolate_setup_back"') < new_ws.find('key="isolate_separate"')
+    # The outcome summary lives in the outcomes fragment so it never goes stale.
+    summary = source[
+        source.find("def _render_choice_summary") : source.find("def _render_mixer_region_caption")
+    ]
+    assert "OUTCOME_CARD_KEY" in summary
+    assert "Custom ·" in summary
+    fragment = source[
+        source.find("def _render_section_and_outcomes") : source.find("def _persist_kwargs")
+    ]
+    assert "_render_choice_summary()" in fragment
     css = (
         Path(__file__).resolve().parents[1] / "ui" / "app.py"
     ).read_text(encoding="utf-8")
@@ -2772,10 +2787,13 @@ def test_checklist_first_mid_last_and_guitar_skipped():
     assert "guitar_split" not in ids
     assert "bass_bleed" not in ids
     text = format_checklist_markdown(checklist_items(skipped, "separate"))
-    assert "[now]" in text
-    assert "[done]" in text
-    assert "[todo]" in text
+    assert CHECKLIST_MARKS["current"] in text
+    assert CHECKLIST_MARKS["done"] in text
+    assert CHECKLIST_MARKS["pending"] in text
+    assert "[now]" not in text
     assert "Split lead / rhythm" not in text
+    # Sub-stages sharing a label (collect, presence, bass_bleed) show once.
+    assert text.count("Separate tracks") == 1
 
 
 def test_expects_guitar_stem():
@@ -2886,7 +2904,7 @@ def test_running_progress_view_has_label_elapsed_eta_and_checklist():
     assert view["percent"] < 1
     assert "Separate tracks" in view["label"] or "%" in view["label"]
     assert "Elapsed" in view["eta_line"]
-    assert "[now]" in view["checklist_md"]
+    assert CHECKLIST_MARKS["current"] in view["checklist_md"]
     assert "Prepare audio" in view["checklist_md"]
     assert "Analyse song" in view["checklist_md"]
     assert "Transcribe tab" in view["checklist_md"]
@@ -3042,11 +3060,18 @@ def test_listening_switcher_renames_current_mix_from_editable_name():
     assert "isolate_mix_name_input" not in switcher
 
 
-def test_poll_and_queue_fragments_run_every_one_second():
+def test_poll_and_queue_fragments_tick_only_while_jobs_are_active():
     page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     source = page.read_text(encoding="utf-8")
-    assert source.count("@st.fragment(run_every=1.0)") == 3
-    assert "run_every=2.0" not in source
+    # I-627: fixed run_every decorators polled disk every second with no job.
+    assert "@st.fragment(run_every=" not in source
+    # Job poll, Queue panel, tab strip and the Working card.
+    assert source.count("run_every=_job_poll_interval()") == 4
+    assert "JOB_POLL_SECONDS = 1.0" in source
+    interval = source[
+        source.find("def _job_poll_interval") : source.find("def _mount_job_poll")
+    ]
+    assert "JOB_POLL_SECONDS if jobs_active() else None" in interval
     poll = source[
         source.find("def _poll_running_jobs") : source.find("def _queue_tab_fragment")
     ]
@@ -3137,7 +3162,16 @@ def test_poll_and_queue_fragments_run_every_one_second():
             "def _mix_tab_strip_fragment"
         )
     ]
-    assert main.find("_mix_tab_strip_fragment") < main.find("_poll_running_jobs()")
+    assert main.find("_mix_tab_strip_fragment") < main.find("_mount_job_poll()")
+
+
+def test_job_poll_interval_is_none_when_idle(monkeypatch):
+    import ui.pages.isolate as isolate_page
+
+    monkeypatch.setattr(isolate_page, "jobs_active", lambda: False)
+    assert isolate_page._job_poll_interval() is None
+    monkeypatch.setattr(isolate_page, "jobs_active", lambda: True)
+    assert isolate_page._job_poll_interval() == isolate_page.JOB_POLL_SECONDS
 
 
 def test_delete_confirm_first_click_is_labeled_as_arming():
@@ -3255,10 +3289,7 @@ def test_home_queue_is_floating_panel_not_bottom_section():
     fragment = source[
         source.find("def _queue_tab_fragment") : source.find("def _mixer_and_downloads_fragment")
     ]
-    assert "@st.fragment(run_every=1.0)" in source[
-        source.find("def _queue_tab_fragment") - 80 : source.find("def _mixer_and_downloads_fragment")
-    ]
-    assert "_render_job_queue_panel()" in fragment
+    assert "st.fragment(_render_job_queue_panel, run_every=_job_poll_interval())()" in fragment
     assert "on_click=_toggle_queue_panel" in source
     assert "isolate_queue_panel_open" in source
 
@@ -3395,6 +3426,8 @@ def test_isolate_source_screen_is_upload_then_youtube_search_box():
     assert "st-key-isolate_source_entry" in tile
     assert "min-height: 7.25rem" in tile
     assert "100vh" in tile
+    # I-634: no viewport lock on stMain, which reflowed the page on Continue.
+    assert "height: 100vh !important" not in tile
     assert "overflow: hidden" in tile
     assert "justify-content: center" in tile
     assert "1px dashed" in tile
@@ -3444,8 +3477,11 @@ def test_mixer_workspace_lite_shares_fixup_and_tab_pdf_carry_over():
     assert "resolve_tab_pdf_carry_from_isolate" in mixer_ws
     assert "carry_over_is_guitar_stem" in mixer_ws
     assert "_request_loading_overlay()" in mixer_ws
-    # Guitar fix-up panel called for both Lite (else branch) and Pro (if branch)
-    assert mixer_ws.count("_render_guitar_fixup_panel(") == 2
+    # Lite and Pro share one More tools selector; fix-up lives in Guitar tools.
+    assert mixer_ws.count("_render_guitar_fixup_panel(") == 1
+    assert "_render_mix_tools(" in mixer_ws
+    assert "st.segmented_control(" in mixer_ws
+    assert "framed=False" in mixer_ws
 
 
 def test_resolve_tab_pdf_carry_prefers_guitar_stem(tmp_path):
@@ -3483,14 +3519,20 @@ def test_resolve_tab_pdf_carry_empty_when_nothing_usable():
     assert is_stem is False
 
 
-def test_file_ready_banner_points_at_home_not_new():
+def test_file_ready_notice_points_at_the_button_below_once_per_file():
     page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     source = page.read_text(encoding="utf-8")
     banner = source[
         source.find("def _render_file_ready_banner") : source.find("def main")
     ]
-    assert "on Home to" in banner
+    # I-636: Separate is further down this page, not on the Home tab.
+    assert "**Separate tracks** below" in banner
+    assert "on Home to" not in banner
     assert "on New to" not in banner
+    # I-628: a one-shot toast per staged file, never an in-flow banner.
+    assert "st.toast(" in banner
+    assert "st.info(" not in banner
+    assert "_FILE_READY_TOASTED_KEY" in banner
 
 
 def test_desktop_mixer_renders_stem_hint_captions():
@@ -3511,7 +3553,7 @@ def test_lite_region_defaults_full_file_with_safer_warn():
     page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     source = page.read_text(encoding="utf-8")
     region = source[
-        source.find("def _render_region_controls") : source.find("def _render_section_preview")
+        source.find("def _render_region_controls") : source.find("def _render_section_and_outcomes")
     ]
     enqueue = source[source.find("def _enqueue_confirmed_job") :]
     assert "Safer: first" in region
@@ -3536,7 +3578,8 @@ def test_lite_region_defaults_full_file_with_safer_warn():
 def test_setup_step_split_keeps_download_and_batch_guards():
     page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     source = page.read_text(encoding="utf-8")
-    assert source.count("_render_section_preview(") == 1
+    # The never-called section preview was removed as dead code.
+    assert "_render_section_preview(" not in source
     controls = source[
         source.find("def _render_separation_controls") : source.find("def _ffmpeg_install_hint")
     ]
@@ -3550,7 +3593,12 @@ def test_setup_step_split_keeps_download_and_batch_guards():
     assert source_step.find('key="isolate_youtube_search_open_btn"') < source_step.find(
         "carry_over_path"
     )
-    back = controls[controls.find('key="isolate_setup_back"') : controls.find('key="isolate_setup_back"') + 400]
+    assert 'key="isolate_setup_back"' not in controls
+    workspace = source[
+        source.find("def _render_new_workspace") : source.find("def _render_choice_summary")
+    ]
+    back = workspace[workspace.find('key="isolate_setup_back"') : workspace.find('key="isolate_setup_back"') + 400]
+    assert back
     assert "reset_new_tab_source" not in back
     assert "isolate_upload_key" not in back
     enqueue = source[
@@ -4531,3 +4579,43 @@ def test_consume_mix_tab_event_accepts_reorder_and_rejects_removed_toolbar_actio
     assert mix_tab_event_index({"to": "x"}) is None
     assert mix_tab_event_index({"action": "reorder"}) is None
     assert mix_tab_event_index(None) is None
+
+
+def test_should_auto_advance_upload_once_per_file():
+    from ui.isolate_state import auto_advance_mark, should_auto_advance_upload
+
+    assert should_auto_advance_upload(pending_fp="abc", advanced_fp=None, tab="t1") is True
+    done_here = auto_advance_mark(pending_fp="abc", tab="t1")
+    # Back returns to the source step with the same file: stay there.
+    assert should_auto_advance_upload(pending_fp="abc", advanced_fp=done_here, tab="t1") is False
+    assert should_auto_advance_upload(pending_fp="def", advanced_fp=done_here, tab="t1") is True
+    # The same song dropped into a new tab advances again.
+    assert should_auto_advance_upload(pending_fp="abc", advanced_fp=done_here, tab="t2") is True
+    assert should_auto_advance_upload(pending_fp="", advanced_fp=None, tab="t1") is False
+
+
+def test_draft_tab_with_running_job_shows_working_card_not_upload():
+    page = Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
+    source = page.read_text(encoding="utf-8")
+    main = source[source.find("def main") :]
+    assert main.find("_active_tab_job() is not None") < main.find("_render_new_workspace(demucs_ok)")
+    assert "_mount_working_card()" in main
+    card = source[
+        source.find("def _render_working_card") : source.find("def _mount_working_card")
+    ]
+    assert 'key="isolate_working_card"' in card
+    assert "_render_running_progress(job)" in card
+    enqueue = source[
+        source.find("def _enqueue_confirmed_job") : source.find("def _library_status_row")
+    ]
+    # One song on a draft tab: its card shows progress, Queue stays closed.
+    assert "if not origin_tab:\n        st.session_state[ISOLATE_QUEUE_PANEL_OPEN_KEY] = True" in enqueue
+
+
+def test_mix_tab_has_no_stale_new_file_caption():
+    """Staged files live on their own draft tabs, so a mix tab never shows an
+    older run in place of one. The caption was inverted and then misfired."""
+    source = (Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py").read_text(
+        encoding="utf-8"
+    )
+    assert "New file selected. Mixer still shows the chosen run" not in source

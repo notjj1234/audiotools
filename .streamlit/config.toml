@@ -3,7 +3,13 @@ base = "dark"
 primaryColor = "#f6ad49"
 backgroundColor = "#192542"
 secondaryBackgroundColor = "#2A4467"
-textColor = "#f6ad49"
+textColor = "#F4F7FB"
+# Inline code defaults to green on dark; keep it in the navy family.
+codeTextColor = "#D5DEEA"
+codeBackgroundColor = "#142033"
+# Links are amber like headings (DESIGN.md); Streamlit's default is a blue
+# that is off-palette on navy.
+linkColor = "#F6AD49"
 
 [browser]
 gatherUsageStats = false

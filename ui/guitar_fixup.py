@@ -233,6 +233,75 @@ def switch_mixer_guitar_variant(
     )
 
 
+def split_mixer_guitar_lead_rhythm(
+    *,
+    stem_paths: dict[str, Path],
+    run_dir: Path,
+) -> GuitarFixupResult:
+    """
+    Run the lead/rhythm split on a finished song's guitar stem (no re-separation).
+
+    Uses the vocal stem when the run has one. The person asked for the split, so
+    ``prefer_split``: two distinct parts are always split (uncertain labels are
+    flagged and can be swapped); only a single part keeps one Guitar track, and
+    ``message`` says why. New files are recorded in the run's ``meta.json`` so
+    they survive a reopen from the library. Nothing is deleted.
+    """
+    from audio_to_tab.lead_rhythm import split_lead_rhythm_guitar
+
+    from ui.common import update_run_artifacts
+
+    guitar = stem_paths.get("guitar")
+    if guitar is None or not Path(guitar).is_file():
+        return GuitarFixupResult(False, "This song has no Guitar track to split.")
+    vocals = stem_paths.get("vocals")
+    try:
+        extra, diag = split_lead_rhythm_guitar(
+            Path(guitar),
+            Path(run_dir),
+            emit_mode="prefer_split",
+            vocals_path=Path(vocals) if vocals and Path(vocals).is_file() else None,
+        )
+    except Exception as exc:
+        return GuitarFixupResult(False, f"Lead/rhythm split failed: {exc}")
+    updates = {name: str(path) for name, path in extra.items()}
+    update_run_artifacts(Path(run_dir), updates)
+    return GuitarFixupResult(True, diag.user_message, artifact_updates=updates)
+
+
+def swap_lead_rhythm_stems(*, stem_paths: dict[str, Path], run_dir: Path) -> GuitarFixupResult:
+    """
+    Swap the Lead and Rhythm files (for a best-guess split labelled the wrong way
+    round). The two files trade contents in place, so downloads, saved mixes and
+    the library all follow; the diagnostics record that a swap happened.
+    """
+    import os
+
+    lead = stem_paths.get("lead_guitar")
+    rhythm = stem_paths.get("rhythm_guitar")
+    if not lead or not rhythm or not Path(lead).is_file() or not Path(rhythm).is_file():
+        return GuitarFixupResult(False, "There is no Lead/Rhythm split to swap.")
+    lead, rhythm = Path(lead), Path(rhythm)
+    tmp = lead.with_name(lead.stem + ".swap-tmp.wav")
+    os.replace(lead, tmp)
+    os.replace(rhythm, lead)
+    os.replace(tmp, rhythm)
+    # New mtimes so waveform / media caches keyed on (path, mtime) refresh.
+    os.utime(lead)
+    os.utime(rhythm)
+    diag_path = Path(run_dir) / "guitar_split_diagnostics.json"
+    if diag_path.is_file():
+        try:
+            diag = json.loads(diag_path.read_text(encoding="utf-8"))
+            features = dict(diag.get("features") or {})
+            features["labels_swapped"] = not bool(features.get("labels_swapped"))
+            diag["features"] = features
+            diag_path.write_text(json.dumps(diag, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    return GuitarFixupResult(True, "Swapped Lead and Rhythm.")
+
+
 def merge_artifact_updates(artifacts: dict[str, Any], updates: dict[str, str] | None) -> dict[str, Any]:
     merged = dict(artifacts or {})
     if updates:

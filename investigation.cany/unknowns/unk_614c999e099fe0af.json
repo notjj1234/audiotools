@@ -1,0 +1,16 @@
+{
+  "id": "unk_614c999e099fe0af",
+  "revision": 2,
+  "question": "How does Moises implement Lead+Rhythm guitar separation and how good is it; do MVSep/LALAL.AI offer it?",
+  "severity": "medium",
+  "domain": "competitors",
+  "status": "investigating",
+  "probes": [
+    "Browse help.moises.ai article 29530520103324",
+    "Check mvsep.com/algorithms",
+    "Listen-test Moises Lead+Rhythm on a track the person owns"
+  ],
+  "evidence_for": [],
+  "evidence_against": [],
+  "resolution": "2026-11-24 follow-up: Moises Lead/Rhythm Guitars verified (help article updated 2026-11-23). MVSep 'Lead/Rhythm Guitar' (id 98, SDR 9.21/9.02, hosted only) verified via its algorithms API. LALAL.AI homepage lists no lead/rhythm. Still open: Moises method/quality, MVSep quality on real songs and terms for app use."
+}

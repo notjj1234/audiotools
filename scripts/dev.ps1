@@ -110,11 +110,12 @@ function Start-Ui {
     if (-not (Test-Path $VenvPython)) {
         throw "Run .\scripts\dev.ps1 install (or tester) first"
     }
-    Write-Host "Starting UI at http://127.0.0.1:8501"
+    Write-Host "Starting UI at http://127.0.0.1:8521"
     $env:CI = "1"
+    # Port 8521+ keeps Audio Tools off Audio Tabs' 8501-8510 band.
     & $VenvPython -m streamlit run ui/app.py `
         --server.address=127.0.0.1 `
-        --server.port=8501 `
+        --server.port=8521 `
         --server.headless=false `
         --browser.gatherUsageStats=false
 }
@@ -131,7 +132,7 @@ Targets:
   .\scripts\dev.ps1 test             Run pytest
   .\scripts\dev.ps1 eval             Run transcription eval harness
   .\scripts\dev.ps1 eval-lead-rhythm Score Lead/Rhythm vs local manifest
-  .\scripts\dev.ps1 ui               Start Streamlit UI (http://127.0.0.1:8501)
+  .\scripts\dev.ps1 ui               Start Streamlit UI (http://127.0.0.1:8521)
   .\scripts\dev.ps1 backend          Start FastAPI server (http://localhost:8000)
   .\scripts\dev.ps1 mixer-build      Build live stem mixer frontend (Node 18+)
   .\scripts\dev.ps1 region-picker-build  Build waveform region picker frontend (Node 18+)

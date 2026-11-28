@@ -139,6 +139,7 @@ MEDIA_TYPES = {
     "no_guitar": "audio/wav",
     "no_piano": "audio/wav",
     "guitar_split_diagnostics": "application/json",
+    "guitar_weights_diagnostics": "application/json",
 }
 
 

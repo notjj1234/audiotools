@@ -19,9 +19,9 @@ import numpy as np
 
 from audio_to_tab.analysis import ChordEvent
 from audio_to_tab.chord_symbols import (
-    DETECTED_QUALITIES,
     PITCHES,
-    level_symbol,
+    TEMPLATE_QUALITIES,
+    basic_from_text,
     parse,
     parse_render,
 )
@@ -30,23 +30,10 @@ logger = logging.getLogger(__name__)
 
 _normalize_symbol = parse_render
 
+# Major and minor triads only (``chord_symbols.TEMPLATE_QUALITIES``).
 _QUALITY_TONES: dict[str, tuple[tuple[str, int], ...]] = {
     "maj": (("root", 0), ("third", 4), ("fifth", 7)),
     "min": (("root", 0), ("third", 3), ("fifth", 7)),
-    "dim": (("root", 0), ("third", 3), ("fifth", 6)),
-    "aug": (("root", 0), ("third", 4), ("fifth", 8)),
-    # The suspended degree replaces the third, so it uses the third's weight.
-    "sus2": (("root", 0), ("third", 2), ("fifth", 7)),
-    "sus4": (("root", 0), ("third", 5), ("fifth", 7)),
-    "5": (("root", 0), ("fifth", 7)),
-    "6": (("root", 0), ("third", 4), ("fifth", 7), ("sixth", 9)),
-    "m6": (("root", 0), ("third", 3), ("fifth", 7), ("sixth", 9)),
-    "7": (("root", 0), ("third", 4), ("fifth", 7), ("seventh", 10)),
-    "maj7": (("root", 0), ("third", 4), ("fifth", 7), ("seventh", 11)),
-    "m7": (("root", 0), ("third", 3), ("fifth", 7), ("seventh", 10)),
-    "m7b5": (("root", 0), ("third", 3), ("fifth", 6), ("seventh", 10)),
-    "mMaj7": (("root", 0), ("third", 3), ("fifth", 7), ("seventh", 11)),
-    "dim7": (("root", 0), ("third", 3), ("fifth", 6), ("seventh", 9)),
 }
 _TONE_WEIGHTS = {
     "root": 1.00,
@@ -58,58 +45,28 @@ _TONE_WEIGHTS = {
     "eleventh": 0.35,
     "thirteenth": 0.30,
 }
-_QUALITY_SUFFIX = {
-    "maj": "",
-    "min": "m",
-    "dim": "dim",
-    "aug": "aug",
-    "sus2": "sus2",
-    "sus4": "sus4",
-    "5": "5",
-    "6": "6",
-    "m6": "m6",
-    "7": "7",
-    "maj7": "maj7",
-    "m7": "m7",
-    "m7b5": "m7b5",
-    "mMaj7": "mMaj7",
-    "dim7": "dim7",
-}
+_QUALITY_SUFFIX = {"maj": "", "min": "m"}
 # Priors are subtracted from z-scored template scores (positive = less likely).
-_QUALITY_PRIOR = {
-    "maj": 0.0,
-    "min": 0.0,
-    "7": 0.15,
-    "maj7": 0.75,
-    "m7": 0.15,
-    "6": 0.45,
-    "m6": 0.45,
-    "sus4": 0.50,
-    "sus2": 0.50,
-    "dim": 0.35,
-    "aug": 0.35,
-    "m7b5": 0.45,
-    "dim7": 0.35,
-    "mMaj7": 1.00,
-    "5": 0.70,
-}
+_QUALITY_PRIOR = {"maj": 0.0, "min": 0.0}
+# Degrees whose triad is diminished (vii in major, ii in minor) stay in the scale
+# but get no template bonus.
 _MAJOR_DIATONIC = {
-    0: frozenset({"maj", "maj7"}),
-    2: frozenset({"min", "m7"}),
-    4: frozenset({"min", "m7"}),
-    5: frozenset({"maj", "maj7"}),
-    7: frozenset({"maj", "7"}),
-    9: frozenset({"min", "m7"}),
-    11: frozenset({"dim", "m7b5"}),
+    0: frozenset({"maj"}),
+    2: frozenset({"min"}),
+    4: frozenset({"min"}),
+    5: frozenset({"maj"}),
+    7: frozenset({"maj"}),
+    9: frozenset({"min"}),
+    11: frozenset(),
 }
 _MINOR_DIATONIC = {
-    0: frozenset({"min", "m7"}),
-    2: frozenset({"dim", "m7b5"}),
-    3: frozenset({"maj", "maj7"}),
-    5: frozenset({"min", "m7"}),
-    7: frozenset({"min", "m7", "maj", "7"}),
-    8: frozenset({"maj", "maj7"}),
-    10: frozenset({"maj", "7"}),
+    0: frozenset({"min"}),
+    2: frozenset(),
+    3: frozenset({"maj"}),
+    5: frozenset({"min"}),
+    7: frozenset({"min", "maj"}),
+    8: frozenset({"maj"}),
+    10: frozenset({"maj"}),
 }
 _HOP = 512
 _BINS_PER_OCTAVE = 36
@@ -131,7 +88,7 @@ def _build_templates() -> tuple[tuple[str, ...], np.ndarray, np.ndarray, tuple[i
     rows: list[np.ndarray] = []
     priors: list[float] = []
     roots: list[int] = []
-    for quality in DETECTED_QUALITIES:
+    for quality in TEMPLATE_QUALITIES:
         tones = _QUALITY_TONES[quality]
         for index, pitch in enumerate(PITCHES):
             vector = np.zeros(12, dtype=np.float64)
@@ -376,69 +333,13 @@ def _key_prior(key: str | None) -> np.ndarray:
 
 
 def _quality_prior_for_window(chroma: np.ndarray) -> np.ndarray:
-    """Constant quality prior, relaxed when a seventh is selectively sounding.
+    """Per-window quality prior. Major and minor are equally likely, so it is flat.
 
-    A balanced Cmaj7 voicing leads the C triad by only ~0.37σ. A flat 0.55σ
-    prior erases it. The same prior stays on when the seventh bin is below
-    0.35× the third, which is the overtone case (measured ~0.18×). On a
-    dense mix every pitch class is loud, so the seventh must also beat the
-    mean of the bins outside the template (2×) before the prior drops.
+    The seventh and power-chord relaxations went with those templates. The
+    signature stays because the diagnosis scripts in docs/chord-recognition call it.
     """
-    prior = _PRIOR_VECTOR.copy()
-    if chroma.size != 12 or float(np.max(chroma)) <= 0:
-        return prior
-    for index, chord in enumerate(_TEMPLATE_CHORDS):
-        if chord is None:
-            continue
-        root = _TEMPLATE_ROOTS[index]
-        if chord.quality in {"maj7", "mMaj7", "m7", "7"}:
-            third_interval = 3 if chord.quality in {"mMaj7", "m7"} else 4
-            seventh_interval = 10 if chord.quality in {"m7", "7"} else 11
-            fifth_interval = 7
-            third = float(chroma[(root + third_interval) % 12])
-            seventh = float(chroma[(root + seventh_interval) % 12])
-            root_energy = float(chroma[root])
-            # Two ways a seventh is real, measured on the synthetic set:
-            # the color tone is ≥0.32 of the root (clean Cmaj7 is 0.38; a
-            # realistic IV triad's phantom major seventh is 0.23), or the
-            # triad is fully voiced and the seventh is ≥0.35 of the third
-            # (a balanced maj7) rather than an overtone (measured 0.18).
-            # Requiring both dropped realistic sevenths to 0.889
-            # (jazz 0.500, quality_zoom 0.833) on synth_bench.py GT beats.
-            strong_color = root_energy > 1e-8 and seventh >= 0.32 * root_energy
-            voiced = (
-                root_energy > 1e-8
-                and third >= 0.45 * root_energy
-                and third > 1e-8
-                and seventh >= 0.35 * third
-            )
-            tone_pcs = {
-                root,
-                (root + third_interval) % 12,
-                (root + fifth_interval) % 12,
-                (root + seventh_interval) % 12,
-            }
-            outside = [float(chroma[pc]) for pc in range(12) if pc not in tone_pcs]
-            selective = seventh > 2.0 * (float(np.mean(outside)) + 1e-9)
-            if (strong_color or voiced) and selective:
-                prior[index] = min(float(prior[index]), 0.05)
-        elif chord.quality == "5":
-            # A bare fifth leads the triad by ~0.79σ (measured C2+G2). The 0.70
-            # prior plus the tonic triad's diatonic bonus still names it C.
-            # Relax only when neither third is present, so a real triad stays.
-            fifth = float(chroma[(root + 7) % 12])
-            major_third = float(chroma[(root + 4) % 12])
-            minor_third = float(chroma[(root + 3) % 12])
-            root_energy = float(chroma[root])
-            bare = (
-                root_energy > 1e-8
-                and fifth >= 0.35 * root_energy
-                and major_third < 0.25 * root_energy
-                and minor_third < 0.25 * root_energy
-            )
-            if bare:
-                prior[index] = min(float(prior[index]), 0.05)
-    return prior
+    del chroma
+    return _PRIOR_VECTOR.copy()
 
 
 def _bass_bonus(bass_vector: np.ndarray) -> np.ndarray:
@@ -463,7 +364,7 @@ def _bass_chroma(
     bass_path: Path | None = None,
     tuning_bins: float = 0.0,
 ) -> np.ndarray:
-    """Low-register chroma used only for slash-bass decisions."""
+    """Low-register chroma for the provisional key estimate (and the bass bonus)."""
     import librosa
 
     bass_y = y
@@ -473,7 +374,7 @@ def _bass_chroma(
             if loaded.size >= int(sr * 0.2):
                 bass_y = loaded
         except Exception:
-            logger.debug("Bass stem unreadable; slash uses the harmony low end", exc_info=True)
+            logger.debug("Bass stem unreadable; using the harmony low end", exc_info=True)
     return librosa.feature.chroma_cqt(
         y=bass_y,
         sr=sr,
@@ -484,41 +385,6 @@ def _bass_chroma(
         bins_per_octave=_BINS_PER_OCTAVE,
         norm=None,
     )
-
-
-def _slash_bass(symbol: str, bass_vector: np.ndarray) -> str:
-    chord = parse(symbol)
-    if chord is None or bass_vector.size != 12:
-        return symbol
-    order = np.argsort(bass_vector)
-    peak = int(order[-1])
-    root_index = PITCHES.index(chord.root)
-    if peak == root_index:
-        return symbol
-    if float(bass_vector[peak]) < 1.6 * (float(bass_vector[root_index]) + 1e-9):
-        return symbol
-    bass_name = PITCHES[peak]
-    quality_tones = {
-        "maj": (0, 4, 7),
-        "min": (0, 3, 7),
-        "dim": (0, 3, 6),
-        "aug": (0, 4, 8),
-        "sus2": (0, 2, 7),
-        "sus4": (0, 5, 7),
-        "5": (0, 7),
-        "6": (0, 4, 7, 9),
-        "m6": (0, 3, 7, 9),
-        "7": (0, 4, 7, 10),
-        "maj7": (0, 4, 7, 11),
-        "m7": (0, 3, 7, 10),
-        "m7b5": (0, 3, 6, 10),
-        "mMaj7": (0, 3, 7, 11),
-        "dim7": (0, 3, 6, 9),
-    }
-    allowed = {(root_index + interval) % 12 for interval in quality_tones.get(chord.quality, ())}
-    if peak not in allowed:
-        return symbol
-    return f"{symbol}/{bass_name}"
 
 
 def _is_downbeat(
@@ -553,12 +419,9 @@ def _beat_seconds(beats: Sequence[float], bpm: float | None) -> float:
 
 
 def _decorate(symbol: str) -> tuple[str, str]:
-    if symbol.upper() == "N":
-        return "N", "N"
-    chord = parse(symbol)
-    if chord is None:
-        return symbol, symbol
-    return level_symbol(chord, "simple"), level_symbol(chord, "medium")
+    """Legacy ``simple`` / ``medium`` fields: both are the basic name now."""
+    basic = basic_from_text(symbol)
+    return basic, basic
 
 
 def detect_chords(
@@ -578,8 +441,8 @@ def detect_chords(
     A fully silent or unreadable file returns ``[]``. Silent regions inside a
     recording are explicit ``N`` events. ``provisional_key`` biases diatonic
     qualities; when omitted it is estimated from the chroma. ``bass_path``
-    supplies the low chroma used only for slash bass. It is not added to the
-    template chroma. Omit it and the slash is read from this file's own low end.
+    supplies the low chroma for that key estimate; it is not added to the
+    template chroma. Symbols are always a root plus optional ``m`` (``F#m``).
     """
     path = Path(audio_path)
     # Opt-in neural path (BTC maj/min). Template remains the default.
@@ -609,7 +472,6 @@ def detect_chords(
                     beats=beats,
                     downbeats=downbeats,
                     beats_per_measure=beats_per_measure,
-                    bass_path=bass_path,
                 )
                 if neural is not None:
                     return neural
@@ -731,7 +593,7 @@ def detect_chords(
     events: list[ChordEvent] = []
     energies: list[float] = []
     for index, state in enumerate(path_indices):
-        start, end, _vector, bass_vector, rms = windows[index]
+        start, end, _vector, _bass_vector, rms = windows[index]
         start = _snap_to_beat(start, boundaries[1:-1], tolerance)
         end = _snap_to_beat(end, boundaries[1:-1], tolerance)
         start = max(0.0, min(duration, start))
@@ -741,7 +603,6 @@ def detect_chords(
             confidence = 1.0
         else:
             symbol = _TEMPLATE_NAMES[state]
-            symbol = _slash_bass(symbol, bass_vector)
             confidence = _window_confidence(scores[index])
         simple, medium = _decorate(symbol)
         events.append(

@@ -13,6 +13,11 @@
 :root {
   /* Base layers — set by parent */
   --bg:            var(--color-bg-deep, #141a14);
+  /* Buttons used these two with no definition and fell back to the browser's
+     white button (I-633). */
+  --bg-raised:     var(--color-bg-raised, #1e271e);
+  --bg-highlight:  var(--color-bg-highlight, #26312a);
+  --bg-inset:      var(--color-bg-inset, var(--color-waveform-bg, #0f150f));
   --text:          var(--color-text-primary, #e8efe6);
   --muted:         var(--color-text-secondary, #9aa0a6);
   --muted-deep:    var(--color-text-muted, #5f6368);

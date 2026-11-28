@@ -149,7 +149,19 @@ st.html(
   .material-symbols-sharp,
   [data-testid="stIconMaterial"],
   [data-testid="stExpanderIcon"],
-  [data-testid="stIcon"] {
+  [data-testid="stIcon"],
+  /* Alert/toast/dialog icons are bare spans with their own testids; without
+     these the span rule above turns ":material/call_split:" into plain text.
+     Inline markdown icons are unlabelled spans (role=img, translate=no).
+     Never write a tag (angle brackets) in this CSS: st.html's sanitizer then
+     drops the whole style block. */
+  [data-testid="stAlertDynamicIcon"],
+  [data-testid="stToastDynamicIcon"],
+  [data-testid="stDialogIcon"],
+  [data-testid="stMetricIcon"],
+  [data-testid="stTextInputIcon"],
+  [data-testid="stNumberInputIcon"],
+  span[role="img"][translate="no"][aria-label$=" icon"] {
     font-family: "Material Symbols Rounded", "Material Symbols Outlined",
       "Material Icons", "Material Icons Outlined" !important;
     font-style: normal !important;
@@ -213,6 +225,165 @@ st.html(
     display: none !important;
   }
 
+  /* Scrollbars appearing between states shifted the content width ~11px
+     (I-634). Reserve the gutter so width never depends on page length. */
+  [data-testid="stMain"] {
+    scrollbar-gutter: stable;
+  }
+  /* The collapse chevron sits flush with the rail edge; never let it (or a
+     long label) open a sideways scrollbar in the desktop window.
+     Streamlit's "scrollbar-gutter: stable both-edges" insets the rail 11px a
+     side in Chromium, but the desktop WebKit window ignores it unless the rail
+     overflows, so the nav jumped 13px between engines. Fixed padding instead. */
+  .stApp section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+    overflow-x: hidden !important;
+    scrollbar-gutter: auto !important;
+    padding-left: 11px !important;
+    padding-right: 11px !important;
+  }
+  /* The opened-file check is a hidden button the focus script clicks; it must
+     not take a slot (or a flex gap) in the page. The first selector is the
+     fragment's own wrapper (Streamlit 1.61 nests fragments one level). */
+  [data-testid="stLayoutWrapper"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"] > .st-key-isolate_opened_audio_watch),
+  [data-testid="stLayoutWrapper"]:has(> .st-key-isolate_opened_audio_watch),
+  .st-key-isolate_opened_audio_watch {
+    display: none !important;
+  }
+  /* Mix view: Export, More tools and Song studio sections change height at
+     the end of the page. Without slack below, a shorter panel clamps the
+     scroll and the whole page jumps down under the cursor. */
+  .stApp:has(.st-key-isolate_mix_tool) [data-testid="stMainBlockContainer"] {
+    padding-bottom: 60vh !important;
+  }
+  /* An open expander is navy card, the same fill as every input, so fields
+     inside Advanced / Export had no visible edge. Recess them to the ground. */
+  [data-testid="stExpander"] [data-baseweb="select"] > div,
+  [data-testid="stExpander"] [data-testid="stSelectbox"] [role="group"],
+  [data-testid="stExpander"] [data-baseweb="input"],
+  [data-testid="stExpander"] [data-baseweb="input"] input,
+  [data-testid="stExpander"] [data-baseweb="textarea"],
+  [data-testid="stExpander"] [data-baseweb="textarea"] textarea,
+  [data-testid="stExpander"] [data-testid="stNumberInputContainer"],
+  [data-testid="stExpander"] [data-testid="stNumberInputContainer"] input {
+    background-color: var(--color-bg-deepest, #192542) !important;
+  }
+  /* Selected segment / pill: Streamlit fills it with amber at 10% alpha,
+     which reads brown on navy. Lift with navy highlight; amber stays the edge. */
+  [data-testid="stButtonGroup"] button[aria-checked="true"] {
+    background-color: var(--color-bg-highlight, #35557C) !important;
+    border-color: var(--color-accent-primary, #F6AD49) !important;
+    color: var(--color-text-primary, #F4F7FB) !important;
+  }
+  /* Isolation: Streamlit's 6rem top padding plus empty style containers left
+     ~150px of dead space above the title (I-634). */
+  .stApp:has(.st-key-isolate_sticky_chrome) [data-testid="stMainBlockContainer"] {
+    padding-top: 3.5rem !important;
+  }
+
+  /* Motion grammar: 120 / 200 / 320 ms, ease-out-quart, opacity + transform
+     only. One shared dim-in keyframe (it was defined in two overlays). */
+  :root {
+    --att-ease: cubic-bezier(0.25, 1, 0.5, 1);
+    --att-dur-fast: 120ms;
+    --att-dur: 200ms;
+    --att-dur-slow: 320ms;
+  }
+  @keyframes audiotools-dim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes att-rise-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  /* Panels that mount on a click, never ones a poll repaints. */
+  .st-key-isolate_mix_tool_panel,
+  .st-key-isolate_queue_float {
+    animation: att-rise-in var(--att-dur) var(--att-ease) both;
+  }
+  [data-testid="stMain"] button {
+    transition: background-color var(--att-dur-fast) var(--att-ease),
+      border-color var(--att-dur-fast) var(--att-ease),
+      color var(--att-dur-fast) var(--att-ease);
+  }
+  [data-testid="stMain"] button:focus-visible {
+    outline: 2px solid var(--color-accent-primary, #f6ad49) !important;
+    outline-offset: 2px;
+  }
+  [data-testid="stMain"] ::selection {
+    background: rgba(246, 173, 73, 0.35);
+  }
+  /* Time and percent text must not change width as digits tick. */
+  .st-key-isolate_status_strip,
+  .st-key-isolate_queue_float,
+  .st-key-att_analysis_status_slot {
+    font-variant-numeric: tabular-nums;
+  }
+  /* The Queue panel already lists a failure; do not stack the strip on it. */
+  .stApp:has(.st-key-isolate_queue_float) [data-testid="stLayoutWrapper"]:has(> .st-key-isolate_status_strip),
+  .stApp:has(.st-key-isolate_queue_float) .st-key-isolate_status_strip {
+    display: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .st-key-isolate_mix_tool_panel,
+    .st-key-isolate_queue_float {
+      animation: none !important;
+    }
+    [data-testid="stMain"] button {
+      transition: none !important;
+    }
+  }
+
+  /* Working state: one centred card with a fixed minimum height, so stage and
+     ETA changes never resize it (I-635). */
+  .st-key-isolate_working_card {
+    width: min(640px, 100%);
+    min-height: 196px;
+    margin: 24px auto 4px !important;
+  }
+  /* Isolation section headings: one step down from the page title, so the
+     page reads as title > sections > controls. */
+  .stApp:has(.st-key-isolate_sticky_chrome) [data-testid="stMain"] [data-testid="stHeading"] h3 {
+    font-size: 1.375rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Choose step: Back + Separate stick to the bottom of the pane (I-635). Sticky
+     goes on the wrapper whose parent is the tall page block. */
+  [data-testid="stLayoutWrapper"]:has(> .st-key-isolate_separate_bar) {
+    position: sticky !important;
+    bottom: 0;
+    z-index: 70;
+  }
+  .st-key-isolate_separate_bar {
+    background: var(--color-bg-deepest, #192542);
+    border-top: 1px solid var(--color-border-subtle, rgba(168, 184, 204, 0.28));
+    padding: 12px 0 16px;
+    margin-top: 8px;
+  }
+  .st-key-isolate_separate_bar [data-testid="stCaptionContainer"] {
+    margin: 0;
+  }
+
+  /* Key-and-chord progress floats bottom-right, out of page flow (I-628). */
+  [data-testid="stLayoutWrapper"]:has(> .st-key-att_analysis_status_slot),
+  .st-key-att_analysis_status_slot {
+    position: fixed !important;
+    right: 24px;
+    bottom: 24px;
+    z-index: 999990;
+    width: min(360px, calc(100vw - 48px));
+    margin: 0 !important;
+  }
+  .st-key-att_analysis_status_slot .att-analysis-status {
+    margin: 0;
+    box-shadow: 0 8px 24px rgba(10, 16, 32, 0.45);
+  }
+  .stApp:has(.st-key-isolate_status_strip) [data-testid="stLayoutWrapper"]:has(> .st-key-att_analysis_status_slot),
+  .stApp:has(.st-key-isolate_status_strip) .st-key-att_analysis_status_slot {
+    bottom: 152px;
+  }
+
   /* Streamlit 1.55+ stale-element fade (real click/rerun dim, not .stApp):
      suppress it so ordinary interactions never flash. The intentional
      full-page loading overlay is gated separately by the pages. */
@@ -264,6 +435,29 @@ st.html(
   [data-testid="stPopover"] button:active:not(:disabled) {
     transform: scale(0.97) !important;
     opacity: 0.88 !important;
+  }
+  /* The fill and text rules repaint every button, so a disabled one looked
+     exactly like a live one (only the cursor changed). Dim it instead. */
+  [data-testid="stButton"] button:disabled,
+  [data-testid="stDownloadButton"] button:disabled,
+  [data-testid="stFormSubmitButton"] button:disabled,
+  [data-testid="stPopover"] button:disabled {
+    opacity: 0.45 !important;
+  }
+  /* Faded amber reads brown over navy, so a disabled primary drops to the
+     card fill with muted text instead. */
+  button[data-testid="stBaseButton-primary"]:disabled,
+  button[data-testid="stBaseButton-primaryFormSubmit"]:disabled {
+    background-color: var(--color-bg-raised, #2A4467) !important;
+    border-color: var(--color-border-subtle, rgba(168, 184, 204, 0.28)) !important;
+    opacity: 0.6 !important;
+  }
+  button[data-testid="stBaseButton-primary"]:disabled,
+  button[data-testid="stBaseButton-primary"]:disabled p,
+  button[data-testid="stBaseButton-primaryFormSubmit"]:disabled,
+  button[data-testid="stBaseButton-primaryFormSubmit"]:disabled p {
+    color: var(--color-text-muted, #B7C3D4) !important;
+    -webkit-text-fill-color: var(--color-text-muted, #B7C3D4) !important;
   }
   @media (prefers-reduced-motion: reduce) {
     [data-testid="stButton"] button,
@@ -356,6 +550,12 @@ st.html(
     z-index: 60 !important;
     min-height: 280px !important;
   }
+  /* Reserve the mixer's smallest real height (2 stems + click ≈ 547px) before
+     the iframe reports in. It mounted at 0px and pushed everything below it
+     down by its full height (I-630). Taller mixes still grow past this. */
+  [data-testid="stElementContainer"]:has(iframe[title*="stem_mixer"]) {
+    min-height: 520px;
+  }
 
   /* Isolate sticky chrome: Home|mix|+ with Queue/Refresh. The page title
      sits above this block and scrolls away. Sticky must be on an ancestor
@@ -404,13 +604,24 @@ st.html(
     + [data-testid="stVerticalBlockBorderWrapper"] {
     margin-top: 0 !important;
   }
+  /* Job status floats bottom-right, out of page flow, so a job starting,
+     finishing or failing never pushes the page (I-628). The key-and-chord
+     notice stacks above it when both show. */
+  [data-testid="stLayoutWrapper"]:has(> .st-key-isolate_status_strip),
   .st-key-isolate_status_strip,
   div[class*="st-key-isolate_status_strip"] {
-    position: relative;
-    z-index: 20;
+    position: fixed !important;
+    right: 24px;
+    bottom: 24px;
+    z-index: 999980;
+    width: min(440px, calc(100vw - 48px));
+    margin: 0 !important;
+  }
+  .st-key-isolate_status_strip [data-testid="stVerticalBlockBorderWrapper"],
+  .st-key-isolate_status_strip > [data-testid="stVerticalBlock"] > div {
     background: var(--color-bg-deepest, #192542);
-    margin-top: 0.35rem;
-    margin-bottom: 0.35rem;
+    box-shadow: 0 8px 24px rgba(10, 16, 32, 0.45);
+    border-radius: 10px;
   }
 
   /* Moises Home|mix|+ strip: sits inside sticky chrome (no separate sticky top). */
@@ -426,9 +637,7 @@ st.html(
   }
   /* Streamlit can leave leftover custom-component iframes when keys change. */
   .st-key-isolate_mix_tabs_strip [data-testid="stCustomComponentV1"]:not(:last-of-type),
-  div[class*="st-key-isolate_mix_tabs_strip"] [data-testid="stCustomComponentV1"]:not(:last-of-type),
-  .st-key-isolate_region_picker [data-testid="stCustomComponentV1"]:not(:last-of-type),
-  div[class*="st-key-isolate_region_picker"] [data-testid="stCustomComponentV1"]:not(:last-of-type) {
+  div[class*="st-key-isolate_mix_tabs_strip"] [data-testid="stCustomComponentV1"]:not(:last-of-type) {
     display: none !important;
     height: 0 !important;
     max-height: 0 !important;
@@ -574,20 +783,9 @@ st.html(
     white-space: nowrap !important;
   }
 
-  /* Isolation Screen 1: one viewport — no page scroll; stack centered in the
-     main column (below title + sticky Home|mix|+ chrome). */
-  .stApp:has(.st-key-isolate_source_entry) [data-testid="stMain"] {
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-  }
-  .stApp:has(.st-key-isolate_source_entry) [data-testid="stMainBlockContainer"] {
-    box-sizing: border-box !important;
-    height: 100% !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-    padding-bottom: 1rem !important;
-  }
+  /* Isolation Screen 1: stack centered in the main column (below title + sticky
+     Home|mix|+ chrome). No viewport lock: locking stMain to 100vh and releasing
+     it on Continue reflowed the page (I-634). */
   /* Full-width ancestors so the 40rem stack can sit in the true column center. */
   .stApp:has(.st-key-isolate_source_entry) [data-testid="stElementContainer"]:has(.st-key-isolate_source_entry),
   .stApp:has(.st-key-isolate_source_entry) [data-testid="stLayoutWrapper"]:has(.st-key-isolate_source_entry),
@@ -630,7 +828,7 @@ st.html(
     min-height: 7.25rem !important;
     border-radius: 0.75rem !important;
     border: 1px dashed color-mix(in srgb, var(--color-text-primary, #e7e5e4) 34%, transparent) !important;
-    background: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 5%, var(--color-bg-deepest, #192542)) !important;
+    background: var(--color-bg-raised, #2A4467) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start !important;
@@ -639,8 +837,10 @@ st.html(
     cursor: pointer;
   }
   /* Streamlit's inner row is flex:1 / flex-start. Do not restyle the
-     instructions node: a row here puts title + file types on one line. */
-  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"] > :not(input):not([data-testid="stFileUploaderDropzoneInstructions"]) {
+     instructions node: a row here puts title + file types on one line.
+     Empty state only: once a file is staged (Streamlit 1.61 draws its chip
+     inside the zone), this 2.5rem clamp hid the file name. */
+  [class*="st-key-isolate_upload_"] [data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderDropzoneInstructions"]) > :not(input):not([data-testid="stFileUploaderDropzoneInstructions"]) {
     display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
@@ -718,7 +918,7 @@ st.html(
     width: 100% !important;
     border-radius: 0.75rem !important;
     border: 1px dashed color-mix(in srgb, var(--color-text-primary, #e7e5e4) 34%, transparent) !important;
-    background: color-mix(in srgb, var(--color-text-primary, #e7e5e4) 5%, var(--color-bg-deepest, #192542)) !important;
+    background: var(--color-bg-raised, #2A4467) !important;
     color: var(--color-text-primary, #e7e5e4) !important;
     display: flex !important;
     flex-direction: row !important;
@@ -807,9 +1007,42 @@ st.html(
     margin-right: 0 !important;
   }
 
-  /* Isolation search 3x3 */
+  /* Isolation search 3x3. Every card row has a fixed height (16:9 thumbnail,
+     2-line title, 1-line meta), so Use / Separate line up across a row however
+     long each title is. */
   [data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has([class*="st-key-isolate_youtube_pick_"]) {
     align-items: stretch !important;
+  }
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_hit_"] img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_hit_"] [data-testid="stMarkdown"]:not(:has([data-testid="stCaptionContainer"])) p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.5;
+    min-height: 3em;
+    margin: 0;
+  }
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_hit_"] [data-testid="stCaptionContainer"],
+  [data-testid="stDialog"] [class*="st-key-isolate_youtube_hit_"] [data-testid="stCaptionContainer"] p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 1.45em;
+  }
+  /* Result links read at caption size but full amber: a real caption is drawn
+     at 60% opacity, which turns amber brown over navy. */
+  [data-testid="stDialog"] [data-testid="stMarkdownContainer"] a[href*="youtube.com"],
+  [data-testid="stDialog"] [data-testid="stMarkdownContainer"] a[href*="youtu.be"] {
+    font-size: 0.875rem;
+  }
+  /* A thumbnail has no use for a fullscreen toolbar, and its hover button
+     lingered as a stray dot above the grid. */
+  [data-testid="stDialog"] [data-testid="stElementToolbar"] {
+    display: none !important;
   }
   [data-testid="stDialog"] [class*="st-key-isolate_youtube_pick_"] button,
   [data-testid="stDialog"] [class*="st-key-isolate_youtube_separate_"] button {
@@ -818,20 +1051,7 @@ st.html(
 
   /* Isolate Queue: non-modal floating activity panel (not a sidebar / drawer). */
   .st-key-isolate_queue_float,
-  div[class*="st-key-isolate_queue_float"] {
-    position: fixed !important;
-    right: 1.15rem;
-    bottom: 1.15rem;
-    width: 420px;
-    max-width: calc(100vw - 2.3rem);
-    max-height: 55vh;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    z-index: 95 !important;
-    background: var(--color-bg-deepest, #192542) !important;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.38);
-    border-radius: 0.75rem;
-  }
+  div[class*="st-key-isolate_queue_float"],
   [data-testid="stElementContainer"]:has(> .st-key-isolate_queue_float):not(:has(.st-key-isolate_queue_toggle_slot)),
   [data-testid="stVerticalBlockBorderWrapper"]:has(> .st-key-isolate_queue_float):not(:has(.st-key-isolate_queue_toggle_slot)) {
     position: fixed !important;
@@ -1120,10 +1340,6 @@ def _loading_overlay_html(label: str) -> str:
     )
     return f"""
 <style>
-  @keyframes audiotools-dim-in {{
-    from {{ opacity: 0; }}
-    to {{ opacity: 1; }}
-  }}
   @keyframes audiotools-circle-spin {{
     from {{ transform: rotate(0deg); }}
     to {{ transform: rotate(360deg); }}
@@ -1210,10 +1426,6 @@ _MODE_SWITCH_HTML = """
   @keyframes audiotools-gear-spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-  }
-  @keyframes audiotools-dim-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
   html:has(.audiotools-mode-switch) body * {
     pointer-events: none !important;
@@ -1354,9 +1566,18 @@ def _publish_analysis_foreground() -> None:
         logger.debug("Could not record the open mix for background analysis", exc_info=True)
 
 
-@st.fragment(run_every=2.0)
-def _analysis_status_fragment() -> None:
-    """Live key-and-chord progress. A Home refresh is the only full rerun."""
+ANALYSIS_POLL_ACTIVE_SECONDS = 2.0
+# Only while a job is in flight or analysis is pending: the worker can hand off
+# to analysis without a rerun here. Fully idle mounts no timer at all.
+ANALYSIS_POLL_IDLE_SECONDS = 6.0
+
+
+def _analysis_status_body() -> None:
+    """Live key-and-chord progress. A Home refresh is the only full rerun.
+
+    The notice sits in a fixed overlay slot (app CSS), never in page flow,
+    so it cannot push the title down when it appears (I-628).
+    """
     from ui.isolate_jobs import read_background_analysis_status
     from ui.pages.home import (
         analysis_status_markup,
@@ -1368,7 +1589,8 @@ def _analysis_status_fragment() -> None:
     status = read_background_analysis_status()
     notice = analysis_status_notice(status)
     if notice:
-        st.html(analysis_status_markup(notice))
+        with st.container(key="att_analysis_status_slot"):
+            st.html(analysis_status_markup(notice))
     token = analysis_status_token(status)
     previous = st.session_state.get("_analysis_status_token")
     st.session_state["_analysis_status_token"] = token
@@ -1383,7 +1605,16 @@ def _mount_analysis_status() -> None:
 
     if multiprocessing.parent_process() is not None:
         return
-    _analysis_status_fragment()
+    from ui.isolate_jobs import jobs_active, read_background_analysis_status
+    from ui.pages.home import analysis_poll_interval
+
+    interval = analysis_poll_interval(
+        read_background_analysis_status(),
+        jobs_running=jobs_active(),
+        active_seconds=ANALYSIS_POLL_ACTIVE_SECONDS,
+        idle_seconds=ANALYSIS_POLL_IDLE_SECONDS,
+    )
+    st.fragment(_analysis_status_body, run_every=interval)()
 
 
 _mount_analysis_status()

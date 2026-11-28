@@ -1,7 +1,7 @@
-"""One chord grammar for detection, key estimation, display levels, and export.
+"""One chord grammar for detection, key estimation, display, and export.
 
 Roots are stored as sharps (``Bb`` parses as ``A#``). ``render`` is the only
-spelling transform. Display levels never change the root or the bass.
+spelling transform. ``basic_symbol`` is the name the product shows and stores.
 """
 
 from __future__ import annotations
@@ -114,45 +114,11 @@ _TONE_INTERVALS: dict[str, tuple[int, ...]] = {
     "m9": (0, 3, 7, 10, 14),
 }
 
-# Simple drops extensions to the triad. Suspensions and power chords stay: reducing
-# them would assert a third that is not sounding.
-_SIMPLE = {
-    "maj": "maj",
-    "min": "min",
-    "dim": "dim",
-    "aug": "aug",
-    "sus2": "sus2",
-    "sus4": "sus4",
-    "5": "5",
-    "6": "maj",
-    "m6": "min",
-    "7": "maj",
-    "maj7": "maj",
-    "m7": "min",
-    "m7b5": "dim",
-    "mMaj7": "min",
-    "dim7": "dim",
-    "maj9": "maj",
-    "7b9": "maj",
-    "add9": "maj",
-    "9": "maj",
-    "m9": "min",
-}
-# Medium keeps structural sevenths (7, m7, maj7, mMaj7). Simple still collapses
-# them to triads. add9/maj9 are never detector states — they only appear via parse.
-_MEDIUM = {
-    **_SIMPLE,
-    "7": "7",
-    "maj7": "maj7",
-    "m7": "m7",
-    "m7b5": "m7b5",
-    "dim7": "dim7",
-    "mMaj7": "mMaj7",
-    "maj9": "maj",
-    "7b9": "7",
-    "9": "7",
-    "m9": "m7",
-}
+# The product names a chord by its root and, when the third is minor, an "m".
+# Everything else (sevenths, suspensions, power chords, slash basses) is dropped:
+# on real mixes those details were mostly wrong and made the names hard to read.
+TEMPLATE_QUALITIES = ("maj", "min")
+_MINOR_THIRD_QUALITIES = frozenset({"min", "m6", "m7", "m7b5", "mMaj7", "m9", "dim", "dim7"})
 
 # Major keys that take flats, plus the same pitch classes when the stored name is sharp.
 _FLAT_MAJOR_PCS = {5, 10, 3, 8, 1, 6}  # F, Bb, Eb, Ab, Db, Gb
@@ -292,13 +258,18 @@ def capo_shape(chord: Chord, fret: int) -> Chord:
     return transpose(chord, -int(fret))
 
 
-def level_symbol(chord: Chord, level: str) -> str:
-    """Display symbol. Root and bass are unchanged at every level."""
-    if level in {"advanced", "chart"}:
-        return render(chord)
-    table = _MEDIUM if level == "medium" else _SIMPLE
-    quality = table.get(chord.quality, "maj")
-    return render(Chord(chord.root, quality, chord.bass))
+def basic_symbol(chord: Chord) -> str:
+    """Root in sharps plus ``m`` for a minor third: ``F``, ``F#m``. No bass, no extension."""
+    return f"{chord.root}{'m' if chord.quality in _MINOR_THIRD_QUALITIES else ''}"
+
+
+def basic_from_text(symbol: object) -> str:
+    """``basic_symbol`` for any stored or typed name. ``N`` stays ``N``; unparseable text is kept."""
+    text = str(symbol or "").strip()
+    if not text or text.upper() == "N":
+        return "N"
+    chord = parse(text)
+    return text if chord is None else basic_symbol(chord)
 
 
 def chord_tones(chord: Chord) -> tuple[str, ...]:
@@ -318,11 +289,13 @@ def chord_tones(chord: Chord) -> tuple[str, ...]:
 __all__ = [
     "DETECTED_QUALITIES",
     "PITCHES",
+    "TEMPLATE_QUALITIES",
     "Chord",
+    "basic_from_text",
+    "basic_symbol",
     "capo_shape",
     "chord_tones",
     "key_uses_flats",
-    "level_symbol",
     "parse",
     "parse_render",
     "render",

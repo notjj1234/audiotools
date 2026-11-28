@@ -47,6 +47,8 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
+from audio_to_tab.chord_symbols import basic_from_text
+
 logger = logging.getLogger(__name__)
 
 SCHEMA_VERSION = 1
@@ -221,15 +223,17 @@ def _coerce_chord(raw: Any) -> ChordEvent | None:
     symbol = _text(raw.get("symbol"))
     if span is None or symbol is None:
         return None
-    simple = _text(raw.get("simple")) or ""
-    medium = _text(raw.get("medium")) or ""
+    # Files written before the vocabulary cut hold names like Cmaj7, C/E or Bb.
+    # Every reader goes through here, so they all get the basic name (C, A#m).
+    simple = _text(raw.get("simple"))
+    medium = _text(raw.get("medium"))
     return ChordEvent(
         start=span[0],
         end=span[1],
-        symbol=symbol,
+        symbol=basic_from_text(symbol),
         confidence=_confidence(raw.get("confidence")),
-        simple=simple,
-        medium=medium,
+        simple=basic_from_text(simple) if simple else "",
+        medium=basic_from_text(medium) if medium else "",
     )
 
 

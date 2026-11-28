@@ -137,7 +137,7 @@ def test_isolate_page_handles_every_mix_tab_action():
     assert "close_right" not in strip
     # Reorder re-renders only the strip fragment, so the page does not jump.
     reorder_at = strip.find('elif action == "reorder"')
-    reorder_end = strip.find("@st.fragment", reorder_at)
+    reorder_end = strip.find("def _mix_tab_strip_fragment", reorder_at)
     reorder = strip[reorder_at:reorder_end]
     assert "_rerun_preserve_scroll()" in reorder
     assert "_rerun_scroll_top()" not in reorder
@@ -167,7 +167,8 @@ def test_mix_tabs_strip_is_sticky_in_app_css():
         in app
     )
     assert ":not(:last-of-type)" in app
-    assert "isolate_region_picker" in app
+    # I-631: the region picker keeps one key, so there are no orphans to hide.
+    assert "isolate_region_picker" not in app
     page = (
         Path(__file__).resolve().parents[1] / "ui" / "pages" / "isolate.py"
     ).read_text(encoding="utf-8")
@@ -176,8 +177,10 @@ def test_mix_tabs_strip_is_sticky_in_app_css():
     assert 'key="isolate_moises_tabs"' in page
     assert "_mix_tabs_nonce" not in page
     assert 'key="isolate_region_picker"' in page
+    assert 'key=f"{region_key}_wave",' in page
+    assert "_wave_{st.session_state" not in page
     main = page[page.find("def main") :]
-    chrome = main[main.find('key="isolate_sticky_chrome"') : main.find("_poll_running_jobs()")]
+    chrome = main[main.find('key="isolate_sticky_chrome"') : main.find("_mount_job_poll()")]
     assert "_mix_tab_strip_fragment" in chrome
     assert 'key="isolate_refresh"' in chrome
     assert "_queue_header_fragment()" in chrome
@@ -187,7 +190,7 @@ def test_mix_tabs_strip_is_sticky_in_app_css():
     assert main.find('st.title("Audio Isolation"') < main.find("_mix_tab_strip_fragment")
     assert main.find("_mix_tab_strip_fragment") < main.find("_queue_header_fragment()")
     assert main.find("_queue_header_fragment()") < main.find('key="isolate_refresh"')
-    assert main.find("_mix_tab_strip_fragment") < main.find("_poll_running_jobs()")
+    assert main.find("_mix_tab_strip_fragment") < main.find("_mount_job_poll()")
     tab_frag = page[
         page.find("def _mix_tab_strip_fragment") : page.find("def _render_busy_tab_close_prompt")
     ]

@@ -32,7 +32,7 @@ Useful local surfaces:
 
 | What | Command |
 |---|---|
-| Desktop UI | `make ui` → http://127.0.0.1:8501 |
+| Desktop UI | `make ui` → http://127.0.0.1:8521 |
 | API | `make backend` → :8000 |
 | Website SPA | `make web` → :5173 (proxies `/v1` → :8000) |
 | Lint (engine only) | `ruff check src/audio_to_tab` |

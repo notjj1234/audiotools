@@ -66,7 +66,7 @@ The **Tab PDF path (`pipeline.py`) and the Isolate path (`isolate.py`)** are bot
 | Moises mixer research | `docs/research/moises/REFERENCE.md` (agent handoff) + `docs/research/moises/UI-UX-STRIP.md` (macOS 2.1.0 observed layout inventory; Replicate/Adapt/Skip) + `docs/research/moises/FULL-TEARDOWN.md` (byte-level deep pass: shell vs hosted studio, tab system, IPC, capture/plugin stacks) + `docs/research/moises/COMPETITIVE-INSPIRATION-PLAN.md` (build authority: priority, interaction, design constraints). Same notes split in that folder: `README.md`, `mixer-ux.md`, `architecture.md`, `gaps-vs-audio-tools.md`, `evidence-index.md`. Static REA on Moises.app; strip is 2.1.0. No Moises source. |
 | Tests for isolation / guitar / desktop UX | `tests/test_isolate.py`, `test_isolate_jobs.py`, `test_isolate_state.py`, `test_global_loading.py`, `test_hardware.py`, `test_scnet.py`, `test_guitar_ft_weights.py`, `test_guitar_backups.py`, `test_guitar_fixup.py`, `test_guitar_improvements.py`, `test_pipeline_guitar.py`, `test_ingest.py`, `test_mixer.py`, `test_metronome.py`, `test_stem_mixer_component.py`, `test_region_picker_component.py`, `test_mix_tabs_component.py`, `test_ui_pages.py`, `test_cli_smoke.py` |
 
-Lead/rhythm split (`src/audio_to_tab/lead_rhythm.py`) exists; it is **not** the default isolate path.
+Lead/rhythm split (`src/audio_to_tab/lead_rhythm.py`, v2 2026-11-24) is **opt-in, never the default**. It needs only a guitar stem (any engine but 4-stem / karaoke) and tries, in order: temporal "who plays when" (pYIN single-note confidence, chroma, register, bends, vocal silence from the vocal stem), then per-bin stereo masks (left/right, centered/wide), and a fixed register crossover only as a last resort. Stems are stereo and full-length. When it isn't confident, it keeps one Guitar stem and writes `reason_code` + `user_message` to `guitar_split_diagnostics.json`. Desktop: Lite/Pro checkbox (`ui/isolate_state.py` `lead_rhythm_supported`), mixer message + Lead+Rhythm/One-Guitar switch + "Split guitar" on finished songs (`ui/pages/isolate.py` `_render_guitar_split_controls`, `ui/guitar_fixup.py` `split_mixer_guitar_lead_rhythm`, `ui/common.py` `update_run_artifacts`). Website: `web/src/leadRhythm.ts` + `IsolatePage.tsx`. Plan/review: `REVIEW_AND_PLAN.md`; register `docs/ui-issues.md` I-624–I-626.
 
 ## Tree
 
@@ -87,6 +87,9 @@ Lead/rhythm split (`src/audio_to_tab/lead_rhythm.py`) exists; it is **not** the 
 - `PLANNING.md` — planning notes; cited by `docs/issues.md`.
 - `DESKTOP.md` — local tester / installer runbook (Isolation Home\|mix\|+, YouTube to MP3 save-to-folder, Tab PDF).
 - `DEPLOY.md` — compose production runbook.
+- `PRODUCT.md` — desktop product truth (users, purpose, principles, binding palette/font) for UI design work.
+- `DESIGN.md` — desktop design system (tokens, four-state Isolation layout, motion, do/don't). Read before desktop UI work.
+- `.impeccable/surfaces/` — per-surface design briefs (e.g. `ui-pages-isolate-py.md`: Audio Isolation direction contract).
 - `LICENSE` — MIT.
 - `.env.example` — hosted env template (copy to `.env`; do not commit `.env`).
 - `.env.lite.example` — lite compose env template.
@@ -111,7 +114,7 @@ Shared engine. Import as `audio_to_tab`.
 - `audio_to_tab/mixer.py` — stem mix / waveform helpers used by desktop downloads; metronome sorts last and starts muted. Equal-power `pan_matrix` / `apply_pan` / `clamp_pan` match `pan.ts`; `mix_stems_to_wav(..., pans=...)` bakes pan into the desktop mix (center is bit-identical).
 - `audio_to_tab/hardware.py` — RAM/GPU/chip probe (`HostProbe.cpu_brand`, Apple Silicon label e.g. `Apple M2 Pro`); desktop speed recommendations (**GPU-first** for CUDA / eligible MPS); MPS gated at ≥12 GB; Lite helpers (`lite_accelerator_available`, `lite_auto_choice`, Detected/Using captions).
 - `audio_to_tab/edition.py` — Windows CPU vs NVIDIA freeze flavor.
-- `audio_to_tab/lead_rhythm.py` — opt-in lead/rhythm split on the guitar stem (not product default).
+- `audio_to_tab/lead_rhythm.py` — opt-in lead/rhythm split on the guitar stem (not product default): temporal segmentation, per-bin stereo masks, stereo full-length output, `reason_code` / `user_message` fallback.
 - `audio_to_tab/pipeline.py` — audio → tab PDF end-to-end (`PipelineConfig` incl. model, guitar_checkpoint, guitar_refine, demucs_segment/jobs, fold_other_mode, low_end_restore_db, sub_bass_debleed).
 - `audio_to_tab/transcribe.py` — Basic Pitch audio → MIDI.
 - `audio_to_tab/tab_generate.py` — MIDI → ASCII tab; `tab_measure_spans` + `tab_document_to_dict` feed the mixer Tab panel (`tab/tab.json`).
@@ -152,7 +155,7 @@ Desktop Streamlit only.
 - `pages/tab_pdf.py` — Tab PDF demo page. Lite: simpler convert path (hides engine/advanced). Pro: guitar refine, guitar-ft, low-end restore, sub-bass de-bleed, Advanced transcription. Upload cap caption from `ui/common.py` (`max_upload_caption`).
 - `pages/__init__.py` — empty package marker.
 - `guitar_fixup.py` — post-separation guitar stem fix-up for the mix-tab Mixer (low-end recovery, pre/refined switch, diagnostics).
-- `isolate_jobs.py` — serial Demucs/RoFormer worker; job status JSON under app data dir; `requeue_job`, `separation_in_progress`, `format_job_error`; `video_offset_sec_for_run` (region start for mixer picture sync). Pipeline stages include `analysis` (`analysis.json` + `analysis_diagnostics.json` + meta summary) and `tab` (`tab/`); both are warnings, not job failures. `analyse_existing_run` is the Home repair action for older runs.
+- `isolate_jobs.py` — serial Demucs/RoFormer worker; job status JSON under app data dir; `requeue_job`, `separation_in_progress`, `format_job_error`; `video_offset_sec_for_run` (region start for mixer picture sync). Pipeline stages include `analysis` (`analysis.json` + `analysis_diagnostics.json` + meta summary) and `tab` (`tab/`); both are warnings, not job failures. `analyse_existing_run` is the Home repair action for older runs. Disk hygiene: succeeded jobs drop `checkpoint/` (`_prune_checkpoint`; paused/failed keep it), `reclaim_checkpoints` (Settings), `forget_jobs_for_run` (Home delete; region offsets kept in `isolate_jobs/video_offsets.json`). Trash purge is in `ui/library_song.py`; log rotation (`_rotate_log`) in `packaging/launcher.py`. `sweep_storage` (once per launch from Home, and after each job) removes unreferenced upload copies older than 7 days and trims `region_previews/` (1 day / 200 MB).
 - `project.py` — mutable per-run player state in `project.json` (mixer volumes/pan/mute/solo/master, rate/semitones/loop/count-in, relative analysis/tab paths). `load_project` / `save_project` (atomic, write-on-change), `seed_mixer`, `update_from_mixer`, `load_analysis_for_run`, `load_tab_for_run`.
 - `isolate_state.py` — Lite outcome cards, Pro track options, progress stages, UI mode helpers (`is_pro_mode`, persist settings), failed-strip TTL/dismiss, guitar selection (`prefer_roformer` for Lite CPU-only hosts), Home/mix shell tab helpers, mixer picture helpers (`mixer_youtube_video_id`, `mixer_local_video_path`, `prefer_local_mixer_picture`).
 - `stem_icons.py` — Lucide-style line-art icons for Lite/Pro stem and outcome tiles.
@@ -197,6 +200,7 @@ Hosted SPA (Vite + React). Dev: `make web` (proxies API). Paths below are repo-r
 - `web/src/auth.tsx` — session / JWT.
 - `web/src/styles.css` — global styles.
 - `web/src/trackOptions.ts` — stem / track option labels shared by isolate UI.
+- `web/src/leadRhythm.ts` — lead/rhythm split helpers (which stems the mixer shows, plain split message); tests `web/src/leadRhythm.test.ts`.
 - `web/src/vite-env.d.ts` — Vite typings.
 - `web/src/pages/IsolatePage.tsx` — website isolation UI (file upload).
 - `web/src/pages/TabPage.tsx` — website tab PDF UI.
@@ -294,6 +298,9 @@ Desktop freeze + installers. How-to: `DESKTOP.md`.
 - `test_mix_tabs_component.py` — desktop mix-tabs build packaging.
 - `test_media.py` — preview / cleanup.
 - `test_ui_common.py` — run list / delete / upload caption helpers.
+- `test_storage_sweep.py` — automatic cleanup of old upload copies and region previews.
+- `test_library_song.py` — library trash usage and permanent delete guards.
+- `test_clear_local_runs.py` — Settings "Clear local run data" keeps library songs and reserved folders.
 - `test_desktop_paths.py` — launcher paths, freeze helpers, Streamlit about/shell assertions, YouTube to MP3 nav order + `ui.pages.youtube_audio` freeze import.
 - `test_desktop_export.py` — `ui/desktop_export.py`.
 - `test_desktop_notify.py` — `ui/desktop_notify.py`.
@@ -325,7 +332,7 @@ Offline scoring. Gitignored under `eval/lead_rhythm/`: `clips/`, `out/`, `manife
 - `lead_rhythm/README.md` — how to score lead/rhythm locally.
 - `lead_rhythm/score_lead_rhythm.py` — scorer.
 - `lead_rhythm/score_guitar_stage1.py` — scores stage-1 guitar stems across output dirs via `analyze_guitar_stem_quality` (low/mid/high share, competitor overlap, optional SI-SDR + high-end preservation).
-- `lead_rhythm/make_synthetic_clips.py` — synthetic clips (output gitignored).
+- `lead_rhythm/make_synthetic_clips.py` — synthetic clips (output gitignored), incl. `role_switch` (one track: strumming → solo while vocals stop) and `chords_only` (must stay one Guitar).
 - `lead_rhythm/manifest.example.json` — example manifest.
 
 ### `.github/`

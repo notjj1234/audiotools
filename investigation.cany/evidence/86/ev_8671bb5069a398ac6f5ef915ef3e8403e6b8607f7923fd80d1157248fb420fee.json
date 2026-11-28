@@ -1,0 +1,214 @@
+{
+  "id": "ev_8671bb5069a398ac6f5ef915ef3e8403e6b8607f7923fd80d1157248fb420fee",
+  "subject": {
+    "kind": "asar",
+    "sha256": "6a42619e39f7ca3c98085e2c2cbcd8fa90397ace6dd133c40c551eee070ef05a",
+    "name": "app.asar"
+  },
+  "operation": "core_evidence_browse",
+  "params": {
+    "show": {
+      "kind": "rows",
+      "limit": 10,
+      "list": "windows"
+    },
+    "source": {
+      "evidence_id": "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4",
+      "kind": "saved"
+    }
+  },
+  "result": {
+    "coverage": {
+      "at_end": true,
+      "examined": 9,
+      "next_offset": null,
+      "status": "page",
+      "total": 9
+    },
+    "from_evidence": "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4",
+    "from_tool": "js_app_map",
+    "shown": {
+      "items": [
+        {
+          "binding": "t",
+          "class": "BrowserWindow",
+          "findings": [
+            "webPreferences are computed at run time; their values could not be read statically"
+          ],
+          "line": 1,
+          "loads": [
+            "out/renderer/index.html"
+          ],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "webPreferences": "dynamic"
+          }
+        },
+        {
+          "binding": "i",
+          "class": "WebContentsView",
+          "findings": [
+            "webPreferences are computed at run time; their values could not be read statically"
+          ],
+          "line": 1,
+          "loads": [
+            "data:text/html;charset=utf-8,{encodeURIComponent()}"
+          ],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "webPreferences": "dynamic"
+          }
+        },
+        {
+          "binding": null,
+          "class": "WebContentsView",
+          "findings": [
+            "webPreferences are computed at run time; their values could not be read statically"
+          ],
+          "line": 1,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "contextIsolation": true,
+            "nodeIntegration": false,
+            "sandbox": true,
+            "webPreferences": "dynamic"
+          }
+        },
+        {
+          "binding": "h",
+          "class": "WebContentsView",
+          "findings": [
+            "webPreferences are computed at run time; their values could not be read statically"
+          ],
+          "line": 1,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "webPreferences": "dynamic"
+          }
+        },
+        {
+          "binding": null,
+          "class": "WebContentsView",
+          "findings": [
+            "contextIsolation is not set; the Electron version's default applies",
+            "nodeIntegration is not set; the Electron version's default applies",
+            "sandbox is not set; the Electron version's default applies"
+          ],
+          "line": 24,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {}
+        },
+        {
+          "binding": "o",
+          "class": "WebContentsView",
+          "findings": [],
+          "line": 27,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": "out/preload/index.cjs",
+          "preload_as_written": "../preload/index.cjs",
+          "web_preferences": {
+            "contextIsolation": true,
+            "focusOnNavigation": false,
+            "nodeIntegration": false,
+            "sandbox": true
+          }
+        },
+        {
+          "binding": "l",
+          "class": "WebContentsView",
+          "findings": [],
+          "line": 27,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": "out/preload/index.cjs",
+          "preload_as_written": "../preload/index.cjs",
+          "web_preferences": {
+            "contextIsolation": true,
+            "focusOnNavigation": false,
+            "nodeIntegration": false,
+            "sandbox": true
+          }
+        },
+        {
+          "binding": "i",
+          "class": "BrowserWindow",
+          "findings": [
+            "sandbox is not set; the Electron version's default applies"
+          ],
+          "line": 125,
+          "loads": [
+            "data:text/html;charset=utf-8,{encodeURIComponent()}"
+          ],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "contextIsolation": true,
+            "nodeIntegration": false
+          }
+        },
+        {
+          "binding": "a",
+          "class": "WebContentsView",
+          "findings": [],
+          "line": 125,
+          "loads": [],
+          "module": "out/main/index.js",
+          "options_from": null,
+          "preload": null,
+          "preload_as_written": null,
+          "web_preferences": {
+            "contextIsolation": true,
+            "focusOnNavigation": false,
+            "nodeIntegration": false,
+            "sandbox": true
+          }
+        }
+      ],
+      "list": "windows",
+      "offset": 0,
+      "total": 9
+    }
+  },
+  "summary": "Part of js_app_map evidence (page).",
+  "confidence": "derived",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [],
+  "coverage": {
+    "status": "complete",
+    "examined": 9,
+    "total": 9
+  },
+  "locations": [],
+  "links": [
+    "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4"
+  ]
+}

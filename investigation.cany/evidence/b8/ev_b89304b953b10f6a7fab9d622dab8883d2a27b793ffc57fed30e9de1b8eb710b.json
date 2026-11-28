@@ -1,0 +1,54 @@
+{
+  "id": "ev_b89304b953b10f6a7fab9d622dab8883d2a27b793ffc57fed30e9de1b8eb710b",
+  "subject": {
+    "kind": "script",
+    "sha256": "a8e5a0a88d431f8f008a9541f3a10dabd294857a51989e23dabf642d84ae5d98",
+    "name": "index.js"
+  },
+  "operation": "core_text_read",
+  "params": {
+    "limit": 120,
+    "offset": 0,
+    "path": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored/pretty/index.js"
+  },
+  "result": {
+    "cut_lines": [],
+    "encoding": "utf8",
+    "file_size": 82966,
+    "lines": 120,
+    "more": true,
+    "offset": 0,
+    "path": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored/pretty/index.js",
+    "replaced_sequences": 0,
+    "text": "import { dialog as oe, app as g, BrowserWindow as f, WebContentsView as O, screen as re, shell as rt, MessageChannelMain as Gt, powerMonitor as qt, systemPreferences as Be, utilityProcess as Jt, powerSaveBlocker as He, session as Xt, Menu as J, webContents as Yt, ipcMain as p, Tray as Kt, nativeTheme as V, nativeImage as at } from \"electron\";\nimport { is as Re, electronApp as Qt, optimizer as Zt } from \"@electron-toolkit/utils\";\nimport { captureMessage as en, init as tn } from \"@sentry/electron/main\";\nimport { join as I } from \"path\";\nimport y, { join as k, dirname as nn } from \"node:path\";\nimport S, { readFileSync as Oe, rmSync as sn, writeFileSync as on } from \"node:fs\";\nimport { s as rn, d as an, i as cn } from \"./chunks/capture-apis-J4FdMrZ-.js\";\nimport { spawn as ct } from \"node:child_process\";\nimport z from \"node:os\";\nimport { promisify as ln } from \"node:util\";\nimport Me from \"axios\";\nimport dn from \"extract-zip\";\nimport un from \"@expo/sudo-prompt\";\nimport { EventEmitter as hn } from \"node:events\";\nimport { createServer as lt } from \"node:net\";\nimport { fileURLToPath as fn } from \"node:url\";\nimport pe from \"@todesktop/runtime\";\nimport pn from \"node:module\";\nconst vi = import.meta.filename, L = import.meta.dirname, Ti = pn.createRequire(import.meta.url), dt = I(import.meta.dirname, \"../../resources/icon.png\"), mn = I(import.meta.dirname, \"../../resources/icon-win.png\"), ae = new Set(), ge = new Set();\nfunction N(n, e) {\n\tn && (e ? ae.add(n.id) : ae.delete(n.id));\n}\nfunction ye(n) {\n\treturn !!n && !n.isDestroyed() && ae.has(n.id);\n}\nfunction ut() {\n\tae.clear();\n}\nasync function te(n) {\n\tconst e = n && !n.isDestroyed() ? n.id : null;\n\tif (e !== null) {\n\t\tif (ge.has(e)) return false;\n\t\tge.add(e);\n\t}\n\ttry {\n\t\tconst t = {\n\t\t\ttitle: \"Unsaved Changes\",\n\t\t\tmessage: \"You have unsaved changes. Are you sure you want to leave?\",\n\t\t\tbuttons: [\"Yes\", \"No\"]\n\t\t}, { response: s } = e !== null ? await oe.showMessageBox(n, t) : await oe.showMessageBox(t);\n\t\treturn s === 0;\n\t} catch (t) {\n\t\treturn console.error(\"Error showing dialog:\", t), false;\n\t} finally {\n\t\te !== null && ge.delete(e);\n\t}\n}\nconst bn = \"https://studio-stage.moises.ai\", wn = bn.replace(/\\/+$/, \"\"), gn = \"https://studio.moises.ai\", ht = g.isPackaged ? gn : wn, me = (n = \"/\") => `${ht}${n}?client=desktop`, ve = me(\"/home\"), yn = me(\"/auth/login\");\nfunction vn(n) {\n\tif (!T(n)) return false;\n\ttry {\n\t\treturn new URL(n).pathname.startsWith(\"/auth/\");\n\t} catch {\n\t\treturn false;\n\t}\n}\nconst ft = () => `MoisesDesktop-${g.getVersion()}-${process.platform}`;\nfunction je(n) {\n\tif (!n || n.isDestroyed()) return;\n\tconst e = n.getUserAgent();\n\te.includes(\"MoisesDesktop\") || n.setUserAgent(`${e} ${ft()}`);\n}\nfunction T(n) {\n\ttry {\n\t\tconst { protocol: e, hostname: t } = new URL(n);\n\t\treturn e !== \"https:\" ? false : t === \"moises.ai\" || t.endsWith(\".moises.ai\");\n\t} catch {\n\t\treturn false;\n\t}\n}\nconst pt = /(?:^|\\/)daw(?:\\/|$)/, Le = {\n\ttitle: \"Studio\",\n\ticon: \"sparkbars\",\n\tnewProject: \"/studio/new\",\n\tmatch: (n) => n.startsWith(\"/studio\") || pt.test(n)\n}, Tn = () => `${me(Le.newProject)}&desktopImport=1`, mt = [\n\t{\n\t\ttitle: \"Play\",\n\t\ticon: \"play\",\n\t\tnewProject: \"/upload/split/3\",\n\t\tuploads: true,\n\t\tmatch: (n) => n === \"/play\" || n.startsWith(\"/play/\") || n.startsWith(\"/library\") || n.startsWith(\"/upload/split\")\n\t},\n\t{\n\t\ttitle: \"Home\",\n\t\ticon: \"home\",\n\t\tmatch: (n) => n === \"/home\" || n.startsWith(\"/home/\")\n\t},\n\tLe,\n\t{\n\t\ttitle: \"Mastering\",\n\t\ticon: \"mastering\",\n\t\tnewProject: \"/mastering/upload\",\n\t\tuploads: true,\n\t\tmatch: (n) => n.startsWith(\"/mastering\") || n.startsWith(\"/upload/master\")\n\t},\n\t{\n\t\ttitle: \"Voice Studio\",\n\t\ticon: \"voice-studio\",\n\t\tnewProject: \"/voice-studio/upload\",\n\t\tuploads: true,\n\t\tmatch: (n) => n.startsWith(\"/voice-studio\")\n\t},\n\t{\n\t\ttitle: \"Lyric Writer\",\n\t\ticon: \"lyrics\",\n\t\tnewProject: \"/lyrics/new\",\n\t\tmatch: (n) => n.startsWith(\"/lyrics\") || n.startsWith(\"/lyric-writer\")\n\t},\n\t{\n\t\ttitle: \"Setlist\",\n\t\ticon: \"setlist\",\n\t\tmatch: (n) => n.startsWith(\"/setlist\")\n\t}\n], Fe = mt.filter((n) => n.newProject).map(({ title: n, icon: e, newProject: t, uploads: s }) => ({\n\ttitle: n,\n\ticon: e,\n\turl: me(t),\n\tinHome: !!s\n}));\n",
+    "total_lines": 3078
+  },
+  "summary": "index.js: lines 1–120 of 3078 (UTF-8).",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "text_as_stored",
+      "message": "The file is read as text as it is stored: nothing is run, rendered or formatted, and text a program builds or downloads while it runs isn't here."
+    }
+  ],
+  "coverage": {
+    "status": "partial",
+    "examined": 120,
+    "total": 3078,
+    "next_offset": 120
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored/pretty/index.js"
+    }
+  ],
+  "links": []
+}

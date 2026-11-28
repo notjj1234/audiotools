@@ -1,0 +1,676 @@
+{
+  "id": "ev_b4fd2817ad17f5e7c66a9828efed3e504c16e347db6c408f5a09ba634e5f3437",
+  "subject": {
+    "kind": "directory",
+    "sha256": "baef7c77d81cb9b25ed28dfc02aa616d2b32fce3992a9e04d5d9330d08f2130a",
+    "name": "Resources"
+  },
+  "operation": "core_archive_show",
+  "params": {
+    "if_tampered": true,
+    "limit": 200,
+    "max_depth": 0,
+    "max_entries": 200000,
+    "max_total_bytes": 4294967296,
+    "offset": 0,
+    "path": "/Applications/Moises.app/Contents/Resources"
+  },
+  "result": {
+    "by_kind": {
+      "asar": 1,
+      "binary": 1,
+      "binary-plist": 1,
+      "directory": 73,
+      "javascript": 4,
+      "json": 4,
+      "macho": 1,
+      "native-addon": 2,
+      "text": 6,
+      "xml-plist": 1
+    },
+    "containers": [],
+    "content_id": "inv_baef7c77d81cb9b25ed28dfc02aa616d2b32fce3992a9e04d5d9330d08f2130a",
+    "contradictions": [],
+    "entries": [
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "af.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "am.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ar.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "bg.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "bn.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ca.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "cs.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "da.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "de.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "el.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "en.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "en_GB.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "es.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "es_419.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "et.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "fa.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "fi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "fil.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "fr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "gu.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "he.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "hi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "hr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "hu.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "id.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "it.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ja.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "kn.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ko.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "lt.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "lv.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ml.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "mr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ms.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "nb.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "nl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "pl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "pt_BR.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "pt_PT.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ro.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ru.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "sk.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "sl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "sr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "sv.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "sw.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ta.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "te.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "th.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "tr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "uk.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "ur.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "vi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "zh_CN.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "zh_TW.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/native",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-win32-x64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/Resources",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/bin",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/native/capture",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/native/capture/prebuilds",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/native/capture/prebuilds/darwin-arm64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "app.asar.unpacked/native/capture/prebuilds/win32-x64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app-update.yml",
+        "sha256": "1f2e9300655fcdb160ccb3e1e65177865009ea4fd7193ba3431666305f513ebe",
+        "size": 130
+      },
+      {
+        "depth": 0,
+        "kind": "asar",
+        "note": "nested archive not opened: depth limit",
+        "path": "app.asar",
+        "role": "electron-archive",
+        "sha256": "6a42619e39f7ca3c98085e2c2cbcd8fa90397ace6dd133c40c551eee070ef05a",
+        "size": 60980438
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app.asar.unpacked/native/capture/README.md",
+        "sha256": "319a84c897bf05e127653b086ea7a9833b07c0079b47edcba1b748f018510c63",
+        "size": 8393
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app.asar.unpacked/native/capture/binding.gyp",
+        "sha256": "b632b819b1bab52727f6729990b3b5753703226100fcc647872c4619393c1073",
+        "size": 2541
+      },
+      {
+        "depth": 0,
+        "kind": "javascript",
+        "path": "app.asar.unpacked/native/capture/fetch-prebuilds.mjs",
+        "role": "script",
+        "sha256": "403b479450863fa46bd943b2295d6996eb1ba12b2e351b3d9fb8ac8d07586073",
+        "size": 4362
+      },
+      {
+        "depth": 0,
+        "kind": "native-addon",
+        "path": "app.asar.unpacked/native/capture/prebuilds/darwin-arm64/capture.node",
+        "role": "native-library",
+        "sha256": "b7002cb4d2bf8fad3fc52e4ba287f2eead1c0001ea5188b5107131a221fcbc8b",
+        "size": 201376
+      },
+      {
+        "depth": 0,
+        "kind": "native-addon",
+        "path": "app.asar.unpacked/native/capture/prebuilds/win32-x64/capture.node",
+        "role": "native-library",
+        "sha256": "b0599aed12945de4203489eb4c0024c98af7bdc3548d77e3abf6f85fa215c4eb",
+        "size": 592896
+      },
+      {
+        "depth": 0,
+        "kind": "xml-plist",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/Info.plist",
+        "role": "bundle-info",
+        "sha256": "86614cf9649204180cd44e2d296ddbd28f9689b14ab9962842aaaf0091a2cbbc",
+        "size": 937
+      },
+      {
+        "depth": 0,
+        "kind": "macho",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/MacOS/MoisesPluginServer",
+        "sha256": "634d0920d4d95d80927749013ea15efdf750d0c936d9198f8a7cbb34499e9862",
+        "size": 4594624
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/PkgInfo",
+        "sha256": "82502191c9484b04d685374f9879a0066069c49b8acae7a04b01d38d07e8eca0",
+        "size": 8
+      },
+      {
+        "depth": 0,
+        "kind": "binary-plist",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/Resources/RecentFilesMenuTemplate.nib",
+        "role": "interface",
+        "sha256": "718eb4c5a3a5564dd832ae9a36cf649f3ef257ce896dd921693eeb6101bd008a",
+        "size": 2842
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/_CodeSignature/CodeResources",
+        "role": "code-signature",
+        "sha256": "9b8570aee558651f95ec77d131bae7c43445f73040a70bbb941e5e4e54e880f9",
+        "size": 2476
+      },
+      {
+        "depth": 0,
+        "kind": "json",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/package.json",
+        "role": "package-manifest",
+        "sha256": "e15ed17f385c73a7671fd97e029128f52b52088608a57f123bb8612c3199f5e2",
+        "size": 581
+      },
+      {
+        "depth": 0,
+        "kind": "json",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server-win32-x64/package.json",
+        "role": "package-manifest",
+        "sha256": "14612dc610fcf6f154e75692ce63d4d065c2ef9eb5be9dba20d5bf0c8df9d22a",
+        "size": 584
+      },
+      {
+        "depth": 0,
+        "kind": "text",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/MoisesPluginServer.entitlements",
+        "role": "entitlements",
+        "sha256": "52fe3ab1eedefcdf1a7c8400d07d9dd553963277cc7a45ffd8b46aa27481e736",
+        "size": 1243
+      },
+      {
+        "depth": 0,
+        "kind": "javascript",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/asar-path.js",
+        "role": "script",
+        "sha256": "c819a75cfe69b31063ccdcc922be6e01c0eb279c8374f7c11dc9497302bfeb52",
+        "size": 270
+      },
+      {
+        "depth": 0,
+        "kind": "javascript",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/bin/moises-plugin-server.mjs",
+        "role": "script",
+        "sha256": "873a474ed4ad3081c46f1bfd3d5e5efa5531f60f99bd1ec595326bba77f5f7cd",
+        "size": 2345
+      },
+      {
+        "depth": 0,
+        "kind": "javascript",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/index.js",
+        "role": "script",
+        "sha256": "8f7f889bc0900bfc1591741f3df5bd8fde1b6dbce4f4fa8113015d0a8fe92422",
+        "size": 6582
+      },
+      {
+        "depth": 0,
+        "kind": "json",
+        "path": "app.asar.unpacked/node_modules/@moises-ai/plugin-server/package.json",
+        "role": "package-manifest",
+        "sha256": "a7dfdd724ef872d8ec24f455cf2ddaa3a0c6dcb74a29987cc2105f302b236434",
+        "size": 1011
+      },
+      {
+        "depth": 0,
+        "kind": "binary",
+        "path": "icon.icns",
+        "sha256": "30cacef9139050760c7d68c4b7c4feff9ae7c621a6f901e1ef19e439f53b1dfe",
+        "size": 710363
+      },
+      {
+        "depth": 0,
+        "kind": "json",
+        "path": "todesktop-runtime-config.json",
+        "sha256": "f0ecc8d7fdd9e5eb8695129963f0829ee8d9c600ed1482be30d9b74d1cf27613",
+        "size": 44
+      }
+    ],
+    "entries_total": 94,
+    "files": 21,
+    "hashed_bytes": 67114046,
+    "path": "/Applications/Moises.app/Contents/Resources",
+    "root": "Resources",
+    "root_kind": "directory",
+    "truncated": false,
+    "unopened_nested": 1
+  },
+  "summary": "Resources (directory) holds 21 files in 94 entries; 0 nested container(s).",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "nested_not_opened",
+      "message": "1 nested archive(s) were not opened (depth or size limit; each entry's note says which); raise max_depth to open deeper ones."
+    },
+    {
+      "code": "no_disk_images",
+      "message": "Disk images (DMG), installers (PKG/MSI) and compressed tarballs are listed as single files, not opened."
+    }
+  ],
+  "coverage": {
+    "status": "partial",
+    "examined": 94,
+    "total": 94
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/Applications/Moises.app/Contents/Resources"
+    }
+  ],
+  "links": []
+}

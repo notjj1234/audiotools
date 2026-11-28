@@ -50,6 +50,8 @@ from ui.guitar_fixup import (
     load_guitar_stem_quality,
     merge_artifact_updates,
     reset_mixer_guitar_fixup,
+    split_mixer_guitar_lead_rhythm,
+    swap_lead_rhythm_stems,
     switch_mixer_guitar_variant,
 )
 from ui.isolate_jobs import (
@@ -64,6 +66,7 @@ from ui.isolate_jobs import (
     enqueue_local_batch,
     ensure_worker_started,
     format_job_error,
+    jobs_active,
     jobs_visible_in_queue,
     list_jobs,
     merge_library_runs,
@@ -76,6 +79,16 @@ from ui.isolate_jobs import (
     separation_in_progress,
     video_offset_sec_for_run,
     worker_busy,
+)
+from ui.isolate_state import (
+    LEAD_RHYTHM_TOGGLE_HELP,
+    LEAD_RHYTHM_TOGGLE_LABEL,
+    LEAD_RHYTHM_VIEW_COMBINED,
+    LEAD_RHYTHM_VIEW_SPLIT,
+    guitar_split_notice,
+    has_lead_rhythm_stems,
+    lead_rhythm_supported,
+    mixer_stems_for_view,
 )
 from ui.isolate_state import (
     CUSTOM_OUTCOME_CARD,
@@ -227,6 +240,8 @@ from ui.isolate_state import (
     SETUP_STEP_SOURCE,
     session_mixer_artifacts_ok,
     setup_continue_enabled,
+    auto_advance_mark,
+    should_auto_advance_upload,
     should_hide_stale_results,
     should_show_failed_job,
     staged_audio_for_new_tab,
@@ -248,10 +263,11 @@ from ui.opened_audio import (
 )
 from ui.media import (
     ensure_mixer_audio_paths,
-    ensure_region_preview_wav,
+    media_stamps,
     media_url_for_file,
     register_mixer_media,
     stem_media_urls,
+    stems_changed_since,
 )
 from ui.project import (
     PROJECT_FILENAME,
@@ -365,6 +381,10 @@ SECTION_OPTIONAL_HELP = (
     "On Lite, long songs use a lot of RAM and time. Try Safer: first 90 s if needed."
 )
 DOWNLOADS_HELP = "Export stems or a mix from the current Mixer run."
+_FILE_READY_TOASTED_KEY = "_isolate_file_ready_toasted_fp"
+_DOWNLOAD_STAMPS_KEY = "_isolate_download_stamps"
+_AUTO_ADVANCED_FP_KEY = "_isolate_auto_advanced_fp"
+JOB_POLL_SECONDS = 1.0
 
 ISOLATE_YOUTUBE_SEARCH_OPEN_KEY = "isolate_youtube_search_open"
 ISOLATE_YOUTUBE_SEARCH_HITS_KEY = "isolate_youtube_search_hits"
@@ -503,25 +523,6 @@ def _youtube_search_dialog() -> None:
                 type="primary",
                 width="stretch",
             )
-    secondary = st.columns([1, 1, 4], vertical_alignment="center")
-    with secondary[0]:
-        if st.button(
-            "Clear",
-            key="isolate_youtube_search_clear",
-            type="secondary",
-            width="stretch",
-        ):
-            _clear_youtube_search_results()
-            st.rerun()
-    with secondary[1]:
-        if st.button(
-            "Close",
-            key="isolate_youtube_search_close",
-            type="secondary",
-            width="stretch",
-        ):
-            _close_youtube_search_dialog()
-            st.rerun()
     if do_search:
         _run_youtube_search(search_q, page=1)
     search_error = st.session_state.get(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY)
@@ -536,13 +537,25 @@ def _youtube_search_dialog() -> None:
         hits_state = []
     busy = bool(downloading_title)
     if hits_state:
-        st.caption(
-            result_range_caption(
-                page,
-                len(hits_state),
-                page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
+        # Close lives in the dialog's X; Clear only matters once there are results.
+        head = st.columns([5, 1], vertical_alignment="center")
+        with head[0]:
+            st.caption(
+                result_range_caption(
+                    page,
+                    len(hits_state),
+                    page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
+                )
             )
-        )
+        with head[1]:
+            if st.button(
+                "Clear",
+                key="isolate_youtube_search_clear",
+                type="tertiary",
+                width="stretch",
+            ):
+                _clear_youtube_search_results()
+                st.rerun()
         hits_for_grid = [hit for hit in hits_state if isinstance(hit, dict)][
             :ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE
         ]
@@ -560,19 +573,25 @@ def _youtube_search_dialog() -> None:
                     url = str(hit.get("url") or "").strip()
                     thumb = str(hit.get("thumbnail_url") or "").strip()
                     meta = meta_line(hit, duration_label=dur)
-                    if thumb:
-                        st.image(thumb, use_container_width=True)
-                    st.markdown(f"**{title}**")
-                    if meta:
-                        st.caption(meta)
-                    if st.button(
-                        "Use",
-                        key=f"isolate_youtube_pick_p{page}_{vid}",
-                        type="primary",
-                        disabled=not url or busy,
-                        width="stretch",
-                        help="Download this track’s audio into New.",
-                    ):
+                    # Fixed-height rows (2-line title, 1-line meta and link; CSS in
+                    # app.py) keep every card's buttons on one line across the row.
+                    with st.container(key=f"isolate_youtube_hit_{slot}"):
+                        if thumb:
+                            st.image(thumb, width="stretch")
+                        st.markdown(f"**{title}**")
+                        st.caption(meta or " ")
+                        actions = st.columns(2)
+                    # Search is the dialog's one primary action; per-card actions are secondary.
+                    with actions[0]:
+                        use_clicked = st.button(
+                            "Use",
+                            key=f"isolate_youtube_pick_p{page}_{vid}",
+                            type="secondary",
+                            disabled=not url or busy,
+                            width="stretch",
+                            help="Download this track’s audio into New.",
+                        )
+                    if use_clicked:
                         queue_youtube_url(st.session_state, url, title=title)
                         st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
                         # Download in the dialog so Use shows progress instead of
@@ -588,14 +607,16 @@ def _youtube_search_dialog() -> None:
                             f"Downloaded **{title}**. Pick a section or separate tracks."
                         )
                         st.rerun()
-                    if st.button(
-                        "Separate",
-                        key=f"isolate_youtube_separate_p{page}_{vid}",
-                        type="secondary",
-                        disabled=not url or busy,
-                        width="stretch",
-                        help="Download this track and queue the outcome already chosen on Home.",
-                    ):
+                    with actions[1]:
+                        separate_clicked = st.button(
+                            "Separate",
+                            key=f"isolate_youtube_separate_p{page}_{vid}",
+                            type="secondary",
+                            disabled=not url or busy,
+                            width="stretch",
+                            help="Download this track and queue the outcome already chosen on Home.",
+                        )
+                    if separate_clicked:
                         queue_youtube_url(st.session_state, url, title=title)
                         st.session_state.pop(ISOLATE_YOUTUBE_SEARCH_ERROR_KEY, None)
                         err = _download_youtube_with_status(url, title=title)
@@ -629,7 +650,8 @@ def _youtube_search_dialog() -> None:
                     page,
                     len(hits_state),
                     page_size=ISOLATE_YOUTUBE_SEARCH_PAGE_SIZE,
-                )
+                ),
+                text_alignment="center",
             )
         with nav[2]:
             if st.button(
@@ -657,6 +679,13 @@ def _stateful_expander(label: str, *, key: str, default: bool = False):
     and the state is lost.
     """
     return st.expander(label, expanded=default, key=key)
+
+
+def _advanced_section(label: str, *, key: str):
+    """Labelled group inside the Advanced disclosure (expanders cannot nest)."""
+    box = st.container(key=key)
+    box.markdown(f"**{label}**")
+    return box
 
 
 def _get_browser_user_id() -> str:
@@ -842,6 +871,8 @@ def _render_guitar_fixup_panel(
     run_dir: Path,
     artifacts_map: dict,
     bass_bleed: dict,
+    *,
+    framed: bool = True,
 ) -> None:
     """Post-separation guitar tweak — no Demucs re-run required."""
     if "guitar" not in stem_paths:
@@ -866,10 +897,15 @@ def _render_guitar_fixup_panel(
     if restore_key not in st.session_state:
         st.session_state[restore_key] = 0.0
 
-    with st.expander(
-        "Guitar fix-up (after separation, no re-run)",
-        expanded=flagged or bool(recovery.get("attempted")) or prerefine_exists,
-    ):
+    frame = (
+        st.expander(
+            "Guitar fix-up (after separation, no re-run)",
+            expanded=flagged or bool(recovery.get("attempted")) or prerefine_exists,
+        )
+        if framed
+        else st.container()
+    )
+    with frame:
         st.caption(
             "Fix boomy bass bleed or thin low notes on the **guitar** stem only. "
             f"Each apply resets from `{GUITAR_BACKUP_NAME}` (saved on first apply)."
@@ -1034,14 +1070,122 @@ def _render_guitar_fixup_panel(
             st.error(result.message)
 
 
-def _load_guitar_split_diagnostics(artifacts: dict) -> dict:
-    path = artifacts.get("guitar_split_diagnostics")
+def _load_json_artifact(artifacts: dict, key: str) -> dict:
+    path = artifacts.get(key)
     if not path or not Path(path).exists():
         return {}
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
     except Exception:
         return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _load_guitar_split_diagnostics(artifacts: dict) -> dict:
+    return _load_json_artifact(artifacts, "guitar_split_diagnostics")
+
+
+def _lead_rhythm_view_key(run_dir: Path) -> str:
+    fp = hashlib.sha256(str(Path(run_dir).resolve()).encode()).hexdigest()[:12]
+    return f"mixer_lead_rhythm_view_{fp}"
+
+
+def _render_guitar_split_controls(
+    stem_paths: dict[str, Path], run_dir: Path, artifacts_map: dict
+) -> str:
+    """Lead/Rhythm message + view switch above the mixer. Returns the mixer view.
+
+    The offer to split a finished song lives in Guitar tools
+    (``_render_guitar_split_offer``) so it does not sit between the song and
+    its mixer (I-635).
+    """
+    view_key = _lead_rhythm_view_key(run_dir)
+    notice = guitar_split_notice(_load_guitar_split_diagnostics(artifacts_map or {}))
+    split_present = has_lead_rhythm_stems(stem_paths)
+    if notice is not None and not (notice["split"] and not split_present):
+        text = notice["text"]
+        # Only a low-confidence split needs a box. A done split is a fact, so it
+        # reads as a caption: no green banner between the song and its mixer.
+        if notice["level"] == "warning":
+            st.warning(text, icon=":material/help:")
+        elif notice["level"] == "success":
+            st.caption(f":material/call_split: {text}")
+        else:
+            st.caption(f":material/info: {text}")
+
+    if split_present and "guitar" in stem_paths:
+        labels = {
+            LEAD_RHYTHM_VIEW_SPLIT: "Lead + Rhythm",
+            LEAD_RHYTHM_VIEW_COMBINED: "One Guitar track",
+        }
+        current = st.session_state.get(view_key, LEAD_RHYTHM_VIEW_SPLIT)
+        view_col, swap_col = st.columns([3, 1], vertical_alignment="bottom")
+        with view_col:
+            choice = st.segmented_control(
+                "Guitar in the mixer",
+                options=list(labels),
+                format_func=lambda v: labels[v],
+                default=current if current in labels else LEAD_RHYTHM_VIEW_SPLIT,
+                key=f"{view_key}_widget",
+                help="Lead and Rhythm add back up to the Guitar track, so only one view plays at a time.",
+            )
+        with swap_col:
+            swap = st.button(
+                "Swap Lead and Rhythm",
+                key=f"{view_key}_swap",
+                type="secondary",
+                help="If the labels are the wrong way round (it's a best guess when the "
+                "message says so), trade them. Files are swapped in place.",
+            )
+        if swap:
+            result = swap_lead_rhythm_stems(stem_paths=stem_paths, run_dir=run_dir)
+            if result.ok:
+                invalidate_mixer_playback(st.session_state)
+                st.rerun()
+            else:
+                st.error(result.message)
+        choice = choice or current
+        if choice != current:
+            st.session_state[view_key] = choice
+            invalidate_mixer_playback(st.session_state)
+        return str(choice)
+
+    return LEAD_RHYTHM_VIEW_SPLIT
+
+
+def _render_guitar_split_offer(
+    stem_paths: dict[str, Path], run_dir: Path, artifacts_map: dict
+) -> None:
+    """Offer the lead/rhythm split on a finished song (Guitar tools panel)."""
+    view_key = _lead_rhythm_view_key(run_dir)
+    notice = guitar_split_notice(_load_guitar_split_diagnostics(artifacts_map or {}))
+    split_present = has_lead_rhythm_stems(stem_paths)
+    if "guitar" in stem_paths and not split_present:
+        tried = notice is not None
+        label = "Try the lead/rhythm split again" if tried else "Split guitar into Lead and Rhythm"
+        cols = st.columns([1, 2])
+        with cols[0]:
+            clicked = st.button(label, key=f"{view_key}_split", type="secondary")
+        with cols[1]:
+            st.caption(
+                "Uses the Guitar track you already have (nothing is re-separated). "
+                "About a minute for a song. If two parts are found you get Lead and "
+                "Rhythm (labels may be a best guess, with Swap). Only a single part "
+                "stays one Guitar track."
+            )
+        if clicked:
+            with st.spinner("Listening for lead and rhythm parts..."):
+                result = split_mixer_guitar_lead_rhythm(stem_paths=stem_paths, run_dir=run_dir)
+            if result.ok:
+                st.session_state["isolate_artifacts"] = merge_artifact_updates(
+                    st.session_state.get("isolate_artifacts") or artifacts_map,
+                    result.artifact_updates,
+                )
+                st.session_state[view_key] = LEAD_RHYTHM_VIEW_SPLIT
+                invalidate_mixer_playback(st.session_state)
+                st.rerun()
+            else:
+                st.error(result.message)
 
 
 def _resolved_export_dir() -> Path:
@@ -1507,8 +1651,7 @@ def _rerun_scroll_top() -> None:
 def _render_custom_stem_grid(
     *, selected_stems: set[str], prefer_roformer: bool, guitar_option: str | None = None
 ) -> None:
-    st.markdown("**Custom**")
-    st.caption("Pick individual tracks")
+    st.markdown("**Or pick tracks**")
     cols = st.columns(3)
     for idx, stem_id in enumerate(CUSTOM_STEM_TILE_ORDER):
         with cols[idx % 3]:
@@ -1652,8 +1795,6 @@ def _render_outcome_picker(
         anchor=False,
         help=SEPARATE_TRACKS_HELP,
     )
-    st.caption("Select what you want out")
-    st.markdown("**Full mix**")
     mix_cols = st.columns(2)
     with mix_cols[0]:
         _render_outcome_tile(
@@ -1674,17 +1815,31 @@ def _render_outcome_picker(
         prefer_roformer=prefer_roformer,
         guitar_option=guitar_option,
     )
+    # One disclosure holds every engine/device/speed choice (I-635). Lite and
+    # Pro share the layout; Pro just has more inside. Collapsed widgets still
+    # run, so the state logic below is unchanged.
+    advanced = _stateful_expander("Advanced", key="isolate_options_expanded", default=False)
     if not pro:
-        _render_lite_guitar_engine_chooser(
-            selected=guitar_option or DEFAULT_LITE_GUITAR_ENGINE,
-            effective_sec=effective_sec,
-            cap_sec=cap_sec,
-            duration_known=duration_known,
-            roformer_available=roformer_ok,
-        )
+        with advanced:
+            _render_lite_guitar_engine_chooser(
+                selected=guitar_option or DEFAULT_LITE_GUITAR_ENGINE,
+                effective_sec=effective_sec,
+                cap_sec=cap_sec,
+                duration_known=duration_known,
+                roformer_available=roformer_ok,
+            )
+            # Lite gets the same opt-in (off by default) whenever Guitar is picked.
+            if "guitar" in selected_stems:
+                st.checkbox(
+                    LEAD_RHYTHM_TOGGLE_LABEL,
+                    help=LEAD_RHYTHM_TOGGLE_HELP,
+                    key="isolate_lead_rhythm",
+                    **persist,
+                )
 
     if pro:
-        _render_track_picker(persist=persist)
+        with advanced:
+            _render_track_picker(persist=persist)
         option_ids = _collect_track_options_from_session()
         matched = outcome_card_for_options(
             option_ids,
@@ -1706,6 +1861,30 @@ def _render_outcome_picker(
         resolved = resolve_track_selection(list(DEFAULT_TRACK_OPTIONS))
 
     pro = is_pro_mode(st.session_state)
+    with advanced:
+        _render_advanced_tail(
+            pro=pro,
+            resolved=resolved,
+            option_ids=option_ids,
+            guitar_option=guitar_option,
+            roformer_ok=roformer_ok,
+            prefer_roformer=prefer_roformer,
+            persist=persist,
+        )
+    return list(option_ids), resolved, preset_error
+
+
+def _render_advanced_tail(
+    *,
+    pro: bool,
+    resolved: dict,
+    option_ids: list[str],
+    guitar_option: str | None,
+    roformer_ok: bool,
+    prefer_roformer: bool,
+    persist: dict,
+) -> None:
+    """Speed, engine and device choices, drawn inside the Advanced disclosure."""
     if pro and resolved.get("caveat"):
         st.caption(resolved["caveat"])
 
@@ -1825,7 +2004,6 @@ def _render_outcome_picker(
                     reason=using_reason,
                 )
             )
-    return list(option_ids), resolved, preset_error
 
 
 def _render_engine_panel(
@@ -1836,9 +2014,7 @@ def _render_engine_panel(
     persist: dict,
 ) -> None:
     """Pro: how the separation is done. Model-specific toggles live here."""
-    with _stateful_expander(
-        "Engine", key="isolate_options_expanded", default=False
-    ):
+    with _advanced_section("Engine", key="isolate_engine_section"):
         quality_now = st.session_state.get("isolate_quality", speed["quality"])
         # Speed and Quality are the same axis. Speed writes Quality whenever it
         # changes, which used to silently discard a hand-picked Quality with no
@@ -1925,6 +2101,11 @@ def _render_engine_panel(
                 **persist,
             )
 
+        st.markdown("**Guitar options**")
+        st.caption(
+            "All off by default. Options that don't apply to the chosen tracks stay "
+            "greyed out, and their help says why."
+        )
         # Opt-in until eval/lead_rhythm Stage-1 3-clip listen beats stock 6s.
         st.checkbox(
             "Use guitar-focused Demucs weights (experimental)",
@@ -1953,10 +2134,16 @@ def _render_engine_panel(
             key="isolate_htdemucs_ft",
             **persist,
         )
+        lr_ok = lead_rhythm_supported(
+            resolved["model"],
+            two_stems=resolved.get("two_stems"),
+            emit_stems=resolved.get("emit_stems"),
+        )
         st.checkbox(
-            "Split lead and rhythm guitar",
-            disabled=resolved["model"] != "htdemucs_6s",
-            help="Uses the guitar stem already in this job. No extra model.",
+            LEAD_RHYTHM_TOGGLE_LABEL,
+            disabled=not lr_ok,
+            help=LEAD_RHYTHM_TOGGLE_HELP
+            + ("" if lr_ok else " Needs a track mix that includes Guitar."),
             key="isolate_lead_rhythm",
             **persist,
         )
@@ -2119,9 +2306,7 @@ def _render_machine_panel(*, probe: object, device_options: list[str]) -> None:
     options = list(device_options) or ["cpu"]
     if st.session_state.get("isolate_device") not in options:
         st.session_state["isolate_device"] = options[0]
-    with _stateful_expander(
-        "This computer", key="isolate_machine_expanded", default=False
-    ):
+    with _advanced_section("This computer", key="isolate_machine_section"):
         _closed_selectbox(
             "Device",
             options,
@@ -2361,9 +2546,9 @@ def _render_region_controls(audio_path: Path | None) -> tuple[float, float | Non
         st.caption("Length unknown. The full file will be processed.")
         return 0.0, None, None
 
+    # The picker shows the range and its length; Pro's two extra captions
+    # repeated the same numbers (I-635).
     pro = is_pro_mode(st.session_state)
-    if pro:
-        st.caption(f"Length: **{format_time_sec(duration)}** ({duration:.1f} s)")
 
     region_key = f"isolate_region_{st.session_state.get('isolate_pending_fp') or st.session_state.get('isolate_upload_fp', 'none')}"
     if region_key not in st.session_state:
@@ -2409,8 +2594,6 @@ def _render_region_controls(audio_path: Path | None) -> tuple[float, float | Non
 
     length = end_sec - start_sec
     region_label = format_region_label(start_sec, length)
-    if pro:
-        st.caption(f"**{region_label}** ({length:.0f} s)")
 
     if length < MIN_REGION_SEC:
         st.error(f"Section must be at least {MIN_REGION_SEC:.0f} seconds.")
@@ -2445,6 +2628,7 @@ def _render_region_bounds_widgets(
     if component_build_available is not None and component_build_available() and region_picker:
         try:
             theme_vars = get_iframe_theme_vars(st.session_state)
+            revision = int(st.session_state.get(f"{region_key}_wave_nonce") or 0)
             url = media_url_for_file(
                 audio_path, coordinates=f"isolate.region.{region_key}"
             )
@@ -2457,9 +2641,12 @@ def _render_region_bounds_widgets(
                     duration_sec=float(duration),
                     max_hint_sec=None if pro else float(LITE_MAX_DURATION_SEC),
                     theme_vars=theme_vars,
-                    key=f"{region_key}_wave_{st.session_state.get(f'{region_key}_wave_nonce', 0)}",
+                    revision=revision,
+                    # Stable key: changing it remounted the iframe and left an
+                    # orphan behind (I-631). The revision marks stale reports.
+                    key=f"{region_key}_wave",
                 )
-            if isinstance(result, dict):
+            if isinstance(result, dict) and int(result.get("revision") or 0) == revision:
                 start_sec = float(result.get("startSec", start_default))
                 end_sec = float(result.get("endSec", end_default))
                 return start_sec, end_sec
@@ -2489,46 +2676,6 @@ def _render_region_bounds_widgets(
             key=f"{region_key}_end",
         )
     return float(start_sec), float(end_sec)
-
-
-def _render_section_preview(
-    audio_path: Path | None,
-    start_sec: float,
-    max_duration_sec: float | None,
-    region_label: str | None,
-) -> None:
-    """Play the section that will be isolated (or the full file)."""
-    if audio_path is None or not audio_path.exists():
-        return
-    fp = str(
-        st.session_state.get("isolate_pending_fp")
-        or st.session_state.get("isolate_upload_fp")
-        or audio_path.name
-    )
-    if max_duration_sec is None:
-        st.caption("Preview: full file (what will be processed)")
-        try:
-            st.audio(str(audio_path))
-        except Exception:
-            pass
-        return
-    label = region_label or format_region_label(start_sec, float(max_duration_sec))
-    st.caption(f"Preview: **{label}** ({float(max_duration_sec):.0f} s)")
-    try:
-        with st.spinner("Preparing section preview…"):
-            preview = ensure_region_preview_wav(
-                audio_path,
-                start_sec=start_sec,
-                length_sec=float(max_duration_sec),
-                fingerprint=fp,
-                cache_dir=DATA_DIR / "region_previews",
-            )
-        st.audio(str(preview))
-    except Exception:
-        try:
-            st.audio(str(audio_path))
-        except Exception:
-            pass
 
 
 @st.fragment
@@ -2565,6 +2712,7 @@ def _render_section_and_outcomes(
         cap_sec=cap_sec,
         duration_known=effective_sec is not None,
     )
+    _render_choice_summary()
     return start_sec, max_duration_sec, region_label, track_options, resolved, preset_error
 
 
@@ -2831,11 +2979,32 @@ def _render_separation_controls() -> dict:
                 ),
                 pending_ready=pending_ready,
             )
-            if st.button(
+            pending_fp = st.session_state.get("isolate_pending_fp")
+            shell_tab = str(st.session_state.get(SHELL_TAB_KEY) or "")
+            # One dropped file goes straight to the next step: no extra click
+            # (I-635). Once per file and tab, so Back can still return here and
+            # stay, while the same song in a new tab advances again.
+            if (
+                continue_ok
+                and single is not None
+                and pending_fp
+                and should_auto_advance_upload(
+                    pending_fp=str(pending_fp),
+                    advanced_fp=st.session_state.get(_AUTO_ADVANCED_FP_KEY),
+                    tab=shell_tab,
+                )
+            ):
+                st.session_state[_AUTO_ADVANCED_FP_KEY] = auto_advance_mark(
+                    pending_fp=str(pending_fp), tab=shell_tab
+                )
+                st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SEPARATE
+                _rerun_scroll_top()
+            # A disabled Continue on an empty screen is noise; show it only
+            # when there is something to continue with.
+            if continue_ok and st.button(
                 "Continue",
                 type="primary",
                 key="isolate_setup_continue",
-                disabled=not continue_ok,
             ):
                 direct_url = youtube_url.strip()
                 if len(uploads) > 1 and len(_stored_batch_paths()) < 2:
@@ -2937,9 +3106,13 @@ def _render_separation_controls() -> dict:
         for device_id in lite_device_choice_ids(probe):
             if device_id not in allowed_devices:
                 allowed_devices.append(device_id)
-    st.session_state["isolate_device"] = default_isolate_device(
+    # Pro's Device selectbox (key isolate_device) is already drawn by now;
+    # Streamlit raises on any write after that, even of the same value.
+    device_default = default_isolate_device(
         probe, allowed_devices, st.session_state.get("isolate_device")
     )
+    if st.session_state.get("isolate_device") != device_default:
+        st.session_state["isolate_device"] = device_default
 
     quality = st.session_state.get("isolate_quality", speed["quality"])
     device = st.session_state.get("isolate_device", speed["device"])
@@ -2978,18 +3151,16 @@ def _render_separation_controls() -> dict:
         fold_other_into_guitar=bool(resolved.get("fold_other_into_guitar", True)),
         fold_other_mode=str(resolved.get("fold_other_mode") or "best_effort"),
         roformer_available=is_roformer_backend_available(),
+        lead_rhythm_allowed=lead_rhythm_supported(
+            resolved["model"],
+            two_stems=resolved.get("two_stems"),
+            emit_stems=resolved.get("emit_stems"),
+        ),
     )
     _park_unmounted_widget(drew_youtube, "isolate_youtube_url", ISOLATE_YOUTUBE_URL_PENDING_KEY)
     _park_unmounted_widget(
         drew_output_name, "isolate_output_name", ISOLATE_OUTPUT_NAME_PENDING_KEY
     )
-    if step == SETUP_STEP_SEPARATE and st.button(
-        "Back",
-        key="isolate_setup_back",
-        type="secondary",
-    ):
-        st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SOURCE
-        _rerun_scroll_top()
     return {
         "model": engine_fields["model"],
         "two_stems": resolved["two_stems"],
@@ -3765,7 +3936,8 @@ def _render_status_strip(jobs: list) -> None:
         fresh = read_status(jid) or job
         status = fresh.get("status")
         if status == "running" and running is None:
-            running = fresh
+            # status.json has no origin_tab; the listed row (spec) does.
+            running = {**job, **fresh}
         elif status == "failed" and failed is None:
             if should_show_failed_job(fresh, now=now, dismissed_ids=dismissed):
                 failed = fresh
@@ -3779,8 +3951,15 @@ def _render_status_strip(jobs: list) -> None:
             str(active_status.get("status") or ""),
         )
     queue_open = bool(st.session_state.get(ISOLATE_QUEUE_PANEL_OPEN_KEY))
-    show_running_hint = running is not None and not queue_open
-    show_queued = running is None and failed is None and bool(waiting_ids)
+    # The open tab's Working card already shows this job; do not repeat it.
+    current_tab = str(st.session_state.get(SHELL_TAB_KEY) or "")
+    on_its_tab = running is not None and str(running.get("origin_tab") or "") == current_tab
+    show_running_hint = running is not None and not queue_open and not on_its_tab
+    waiting_here = any(
+        str(job.get("id") or "") in waiting_ids and str(job.get("origin_tab") or "") == current_tab
+        for job in jobs
+    )
+    show_queued = running is None and failed is None and bool(waiting_ids) and not waiting_here
     # Idle: paint nothing. An empty keyed container reserved a random vertical
     # gap between the Home|mix tabs and Upload on Home.
     if not (failed or show_running_hint or stopping_previous or show_queued):
@@ -3802,7 +3981,6 @@ def _render_status_strip(jobs: list) -> None:
                 )
 
 
-@st.fragment(run_every=1.0)
 def _poll_running_jobs() -> None:
     """Keep progress visible across page switches; apply finished jobs when unpinned."""
     ensure_worker_started()
@@ -3830,6 +4008,7 @@ def _poll_running_jobs() -> None:
 
     job = plan["apply_job"]
     applied = False
+    open_mixer = False
     if job:
         jid = str(job.get("id") or "")
         fresh = read_status(jid) or job
@@ -3864,14 +4043,94 @@ def _poll_running_jobs() -> None:
 
     if isolate_poll_requires_full_rerun(applied=applied, plan_rerun=bool(plan["rerun"])):
         _persist_isolate_ui_state()
-        _rerun_scroll_top()
+        # Jump to the top only when the view really changes to the mixer. A
+        # finished background job must not yank the page you are reading (I-629).
+        if open_mixer:
+            _rerun_scroll_top()
+        else:
+            st.rerun()
 
     _render_status_strip(jobs)
 
 
-@st.fragment(run_every=1.0)
+_JOB_ACTIVE_STATUSES = frozenset({"queued", "running", "paused", "pausing"})
+
+
+def _active_tab_job() -> dict | None:
+    """The in-flight job that started from the open draft tab, if any."""
+    tab = st.session_state.get(SHELL_TAB_KEY)
+    if not (isinstance(tab, str) and is_new_draft_tab(tab)):
+        return None
+    for job in list_jobs(limit=15):
+        if str(job.get("origin_tab") or "") != tab:
+            continue
+        jid = str(job.get("id") or "")
+        fresh = (read_status(jid) if jid else None) or job
+        if str(fresh.get("status") or "") in _JOB_ACTIVE_STATUSES:
+            return fresh
+    return None
+
+
+def _render_working_card() -> None:
+    """Working state: one calm card in a fixed-height slot, instead of an empty
+    upload screen beside a Queue panel (I-635). Rows always paint, so a stage
+    change never resizes the card."""
+    job = _active_tab_job()
+    if job is None:
+        # Finished, failed or stopped: hand the tab back to the full page.
+        st.rerun()
+        return
+    status = str(job.get("status") or "")
+    with st.container(key="isolate_working_card", border=True):
+        st.markdown(f"**{_job_source_title(job)}**")
+        if status == "running":
+            _render_running_progress(job)
+        else:
+            # Same rows as the running card, with real text: a bare NBSP caption
+            # painted at zero height, so the card grew 22px when the job started.
+            st.progress(0.0)
+            waiting = queued_wait_caption(str(job.get("id") or ""), queued_job_ids())
+            queued = status == "queued"
+            st.markdown(waiting if queued else "Paused. Resume it from Queue.")
+            st.caption(
+                "Starts as soon as this computer is free." if queued else "Progress so far is kept."
+            )
+            if is_pro_mode(st.session_state):
+                st.markdown(str(running_progress_view(job, time.time()).get("checklist_md") or ""))
+        note_col, new_col = st.columns([3, 2], vertical_alignment="center")
+        with note_col:
+            st.caption("You can leave this tab. The mixer opens here when it is done.")
+        with new_col:
+            if st.button(
+                "Separate another song",
+                key="isolate_working_new",
+                type="tertiary",
+                width="stretch",
+            ):
+                open_new_draft_tab(st.session_state, fresh=True)
+                _rerun_scroll_top()
+
+
+def _mount_working_card() -> None:
+    st.fragment(_render_working_card, run_every=_job_poll_interval())()
+
+
+def _job_poll_interval() -> float | None:
+    """Tick live job fragments only while a job is queued or running.
+
+    Idle ticks re-read every job on disk and repaint the strip for nothing
+    (I-627). Enqueue and job completion both force a full rerun, which
+    re-evaluates this, so polling starts and stops on its own.
+    """
+    return JOB_POLL_SECONDS if jobs_active() else None
+
+
+def _mount_job_poll() -> None:
+    st.fragment(_poll_running_jobs, run_every=_job_poll_interval())()
+
+
 def _queue_tab_fragment() -> None:
-    _render_job_queue_panel()
+    st.fragment(_render_job_queue_panel, run_every=_job_poll_interval())()
 
 
 @st.fragment
@@ -3891,11 +4150,20 @@ def _mixer_and_downloads_fragment(
     the metronome row and rebake the export WAV without remounting playback.
     """
     selected_stem_paths = stem_paths
-    # Re-register download URLs each fragment pass so rebaked metronome.wav is fresh.
-    try:
-        download_urls = stem_media_urls(selected_stem_paths, coord_prefix="isolate.download")
-    except Exception:
-        pass
+    # A rebaked metronome.wav needs a fresh download URL. Re-register only files
+    # that changed since the full run: registering reads and hashes the whole
+    # file, and this fragment reruns on every mixer report (I-630).
+    stale = stems_changed_since(
+        selected_stem_paths, st.session_state.get(_DOWNLOAD_STAMPS_KEY) or {}
+    )
+    if stale:
+        try:
+            download_urls = {
+                **download_urls,
+                **stem_media_urls(stale, coord_prefix="isolate.download.fresh"),
+            }
+        except Exception:
+            logger.warning("Could not refresh download URLs for %s", sorted(stale), exc_info=True)
     mixer_state = _render_live_mixer(
         selected_stem_paths,
         track_title=base_name,
@@ -3932,9 +4200,10 @@ def _mixer_and_downloads_fragment(
             mixer_state, run_dir=run_dir, stem_paths=selected_stem_paths
         )
 
-    st.subheader("Downloads", anchor=False, help=DOWNLOADS_HELP)
+    # Export folds away under the mixer: the mixer is the page (I-635).
+    export = _stateful_expander("Export", key="isolate_export_expanded", default=False)
     if not selected_stem_paths:
-        st.info("No tracks available to download.")
+        export.info("No tracks available to download.")
         return
 
     stem_names = sort_stem_names(selected_stem_paths.keys())
@@ -3966,19 +4235,21 @@ def _mixer_and_downloads_fragment(
     if not isinstance(pan, dict) or not pan:
         pan = load_project(run_dir)[0]["mixer"].get("pan") or {}
 
-    _render_downloads_panel(
-        selected_stem_paths,
-        base_name=base_name,
-        run_dir=run_dir,
-        stem_names=stem_names,
-        volumes_db=volumes_db,
-        muted=muted,
-        soloed=soloed,
-        master_volume_db=master_volume_db,
-        playback_rate=playback_rate,
-        playback_semitones=playback_semitones,
-        pans=pan,
-    )
+    with export:
+        st.caption(DOWNLOADS_HELP)
+        _render_downloads_panel(
+            selected_stem_paths,
+            base_name=base_name,
+            run_dir=run_dir,
+            stem_names=stem_names,
+            volumes_db=volumes_db,
+            muted=muted,
+            soloed=soloed,
+            master_volume_db=master_volume_db,
+            playback_rate=playback_rate,
+            playback_semitones=playback_semitones,
+            pans=pan,
+        )
 
 
 def _save_all_tracks(selected_stem_paths: dict[str, Path], export_root: Path, base_name: str, fmt: str) -> None:
@@ -4078,10 +4349,15 @@ def _render_downloads_panel(
                 target = Path(str(last)) if last else export_root
                 if not open_path_in_os(target):
                     st.warning("Could not open that folder.")
-        st.caption(
-            "If the folder window is hidden, Alt+Tab. Saving overwrites a same-named "
-            "file. On Linux, a missing zenity picker is treated as cancel."
+        # Only the tip for this computer: a Mac user has no Alt+Tab or zenity.
+        switch_keys = "Cmd+Tab" if sys.platform == "darwin" else "Alt+Tab"
+        folder_hint = (
+            f"If the folder window is hidden, {switch_keys}. "
+            "Saving overwrites a same-named file."
         )
+        if sys.platform.startswith("linux"):
+            folder_hint += " A missing zenity picker is treated as cancel."
+        st.caption(folder_hint)
 
         st.divider()
         fmt = _download_format_widget()
@@ -4488,9 +4764,11 @@ def _enqueue_confirmed_job(choice: dict, audio_path: Path) -> None:
             "two_pass": bool(choice.get("two_pass")),
             "guitar_refine": bool(choice.get("guitar_refine")),
         }
-    # Stay on the draft tab (or Home); open Queue on the next paint.
+    # Stay on the draft tab (or Home). A draft tab shows its own Working card,
+    # so Queue opens only when there is no tab to watch.
     st.session_state["_isolate_pending_queue"] = True
-    st.session_state[ISOLATE_QUEUE_PANEL_OPEN_KEY] = True
+    if not origin_tab:
+        st.session_state[ISOLATE_QUEUE_PANEL_OPEN_KEY] = True
     if origin_tab:
         # Do not jump to Home chrome — processing stays on this tab.
         st.session_state["_isolate_keep_draft_tab"] = origin_tab
@@ -4672,7 +4950,7 @@ def _render_listening_switcher(browser_id: str | None, rows: list[dict] | None =
         )
     with cols[1]:
         delete_clicked = _confirm_button(
-            "Delete this run",
+            "Delete run",
             key="isolate_delete_listening",
             confirm_label="Delete from disk",
             confirm_help="Removes these separated tracks. No undo.",
@@ -4732,14 +5010,10 @@ def _render_listening_switcher(browser_id: str | None, rows: list[dict] | None =
 def _render_moises_tab_strip(browser_id: str | None) -> None:
     """Top Home | mix tabs | + chrome (sticky while scrolling)."""
     rows = _library_rows_available(browser_id)
+    # Song name only: tabs shrink to fit, and a shared "YouTube · " prefix left
+    # every narrow tab reading "YouTube…".
     labels = {
-        str(r["run_dir"]): format_source_title(
-            r.get("title") or "tracks",
-            infer_source_kind(
-                source_kind=r.get("source_kind"),
-                source_fingerprint=r.get("source_fingerprint"),
-            ),
-        )
+        str(r["run_dir"]): str(r.get("title") or "").strip() or "tracks"
         for r in rows
     }
     options = [str(r["run_dir"]) for r in rows]
@@ -4846,18 +5120,65 @@ def _render_moises_tab_strip(browser_id: str | None) -> None:
         _rerun_preserve_scroll()
 
 
-@st.fragment(run_every=1.0)
 def _mix_tab_strip_fragment(browser_id: str | None) -> None:
+    st.fragment(_render_mix_tab_strip, run_every=_job_poll_interval())(browser_id)
+
+
+def _render_mix_tab_strip(browser_id: str | None) -> None:
     """Refresh tab busy/progress without remounting the mixer.
 
     Progress ticks stay inside this fragment. Tab clicks still call
     ``_rerun_scroll_top`` from the strip, which is a full-page rerun.
-    A file opened from the OS while this window is up is claimed here, then
-    the whole page remounts so Home shows the new tab.
     """
+    _render_moises_tab_strip(browser_id)
+
+
+_OPENED_AUDIO_FOCUS_SCRIPT = """
+<script>
+(function () {
+  if (window.__attOpenedAudioFocus) return;
+  window.__attOpenedAudioFocus = true;
+  var last = 0;
+  function check() {
+    var now = Date.now();
+    if (now - last < 1500) return;
+    last = now;
+    var btn = document.querySelector('.st-key-isolate_opened_audio_check button');
+    if (btn) btn.click();
+  }
+  window.addEventListener('focus', check);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') check();
+  });
+})();
+</script>
+"""
+
+
+def _watch_opened_audio() -> None:
+    """Claim a file the OS opened while this window is up, then remount Home.
+
+    The hidden button is clicked by the focus script, so only this fragment
+    reruns, and only when the window comes forward.
+    """
+    with st.container(key="isolate_opened_audio_watch"):
+        st.button("Check opened files", key="isolate_opened_audio_check")
+        # Inside the hidden container: a script still runs, and its element
+        # takes no flex gap in the page.
+        st.html(_OPENED_AUDIO_FOCUS_SCRIPT, unsafe_allow_javascript=True)
     if _consume_opened_audio():
         _rerun_scroll_top()
-    _render_moises_tab_strip(browser_id)
+
+
+def _mount_opened_audio_watch() -> None:
+    """No timer: Finder's "Open with" makes the launcher queue the file and
+    focus this window, so window focus is the signal. A 2 s run_every here
+    reran every desktop session forever (header spinner flash, ~15% CPU in GC),
+    which is why the launcher felt laggy while `make ui` (no env var) did not.
+    """
+    if not os.environ.get(PENDING_OPEN_ENV, "").strip():
+        return
+    st.fragment(_watch_opened_audio)()
 
 
 def _render_busy_tab_close_prompt(browser_id: str | None) -> None:
@@ -5154,16 +5475,34 @@ def _render_new_workspace(demucs_ok: bool) -> None:
     # Jobs run one at a time. Saying "Separate tracks" while one is already
     # running promises something immediate and then silently queues instead.
     busy = separation_in_progress()
-    if busy:
-        st.caption("A separation is already running. This one starts when that finishes.")
     has_source = _has_source_for_job(choice)
-    if st.button(
-        "Add to queue" if busy else "Separate tracks",
-        type="primary",
-        disabled=not demucs_ok or not has_source,
-        key="isolate_separate",
-    ):
-        _try_enqueue_choice(choice)
+    # Sticky footer: the one primary action stays in reach however long the
+    # page gets, with Back beside it instead of stacked above it (I-635).
+    with st.container(key="isolate_separate_bar"):
+        back_col, note_col, go_col = st.columns([1, 4, 2], vertical_alignment="center")
+        with back_col:
+            if st.button("Back", key="isolate_setup_back", type="tertiary"):
+                st.session_state[SETUP_STEP_KEY] = SETUP_STEP_SOURCE
+                _rerun_scroll_top()
+        with note_col:
+            if busy:
+                st.caption("One is already separating. This one starts after it.")
+            elif not has_source:
+                st.caption("Upload a file or a YouTube URL first.")
+        with go_col:
+            if st.button(
+                "Add to queue" if busy else "Separate tracks",
+                type="primary",
+                disabled=not demucs_ok or not has_source,
+                key="isolate_separate",
+                width="stretch",
+            ):
+                _try_enqueue_choice(choice)
+
+
+def _render_choice_summary() -> None:
+    """What Separate will produce. Inside the outcomes fragment so a tile click
+    updates it in the same paint (it went stale outside the fragment)."""
     card = str(st.session_state.get(OUTCOME_CARD_KEY) or DEFAULT_OUTCOME_CARD)
     if card in OUTCOME_CARDS:
         outcome_label = str(OUTCOME_CARDS[card]["label"])
@@ -5173,8 +5512,7 @@ def _render_new_workspace(demucs_ok: bool) -> None:
         )
         names = [CUSTOM_STEM_CHOICES[s] for s in stems]
         outcome_label = f"Custom · {', '.join(names)}" if names else "Custom"
-    source_note = "Source ready" if has_source else "Upload a file or a YouTube URL"
-    st.caption(f"{outcome_label} · {source_note}")
+    st.caption(f"You get: **{outcome_label}**")
 
 
 def _render_mixer_region_caption(base_name: str) -> None:
@@ -5260,16 +5598,16 @@ def _enqueue_reseparate_job(
     st.rerun()
 
 
-def _render_reseparate_panel(stem_paths: dict[str, Path], run_dir: Path) -> None:
+def _render_reseparate_panel(
+    stem_paths: dict[str, Path], run_dir: Path, *, framed: bool = True
+) -> None:
     """'Break down a stem' control — re-separate one stem in place (section 6)."""
     if len(stem_paths) < 1:
         return
     parent_config = _load_parent_config(run_dir)
     run_fp = hashlib.sha256(str(run_dir.resolve()).encode()).hexdigest()[:12]
-    with st.expander(
-        "Break down a stem (re-separate)",
-        expanded=False,
-    ):
+    frame = st.expander("Break down a stem (re-separate)", expanded=False) if framed else st.container()
+    with frame:
         st.caption(
             "Re-run the separator on one existing stem to break out more "
             "instruments without reprocessing the whole track. On success the "
@@ -5303,10 +5641,17 @@ def sidebar_chord_visible(shell: str, run_dir: str | None, analysis: dict | None
 
 _SIDEBAR_CHORD_HTML = """
 <style>
+  /* Fill only the height left under the nav. A 100vh min-height here added
+     the nav's ~280px on top, so the rail always scrolled (and WebKit drew
+     both scrollbars in the desktop window). */
+  body:has(.att-sidebar-chord) [data-testid="stSidebarContent"] {
+    display: flex;
+    flex-direction: column;
+  }
   body:has(.att-sidebar-chord) [data-testid="stSidebarUserContent"] {
     display: flex;
     flex-direction: column;
-    min-height: calc(100vh - 2rem);
+    flex: 1 0 auto;
   }
   body:has(.att-sidebar-chord) [data-testid="stElementContainer"]:has(.att-sidebar-chord) {
     margin-top: auto !important;
@@ -5318,24 +5663,26 @@ _SIDEBAR_CHORD_HTML = """
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     max-width: 216px;
-    margin-top: 8px;
+    /* The slot above already pads 8px; a second margin pushed the rail 7px
+       past an 860px window and drew a scrollbar for nothing. */
+    margin-top: 0;
     padding: 12px;
-    border-top: 1px solid #A8B8CC;
-    background: #192542;
-    color: #F4F7FB;
+    border-top: 1px solid var(--color-border-subtle, #A8B8CC);
+    background: var(--color-bg-deepest, #192542);
+    color: var(--color-text-primary, #F4F7FB);
     text-align: center;
   }
   .att-sidebar-chord-eyebrow {
-    color: #B7C3D4;
+    color: var(--color-text-muted, #B7C3D4);
     font-size: 0.75rem;
     line-height: 1.2;
   }
   .att-sidebar-chord-symbol {
     margin-top: 4px;
-    color: #F6AD49;
+    color: var(--color-accent-primary, #F6AD49);
     font-weight: 750;
     font-size: 1.8rem;
     line-height: 1;
@@ -5351,17 +5698,17 @@ _SIDEBAR_CHORD_HTML = """
   }
   .att-sidebar-chord .chord-string,
   .att-sidebar-chord .chord-fret {
-    stroke: #B7C3D4;
+    stroke: var(--color-text-muted, #B7C3D4);
     stroke-width: 1;
     opacity: 0.55;
   }
   .att-sidebar-chord .chord-fret { opacity: 0.28; }
-  .att-sidebar-chord .chord-nut { fill: #F4F7FB; opacity: 0.75; }
-  .att-sidebar-chord .chord-dot { fill: #F6AD49; }
-  .att-sidebar-chord .chord-open { fill: none; stroke: #F4F7FB; stroke-width: 1.2; }
+  .att-sidebar-chord .chord-nut { fill: var(--color-text-primary, #F4F7FB); opacity: 0.75; }
+  .att-sidebar-chord .chord-dot { fill: var(--color-accent-primary, #F6AD49); }
+  .att-sidebar-chord .chord-open { fill: none; stroke: var(--color-text-primary, #F4F7FB); stroke-width: 1.2; }
   .att-sidebar-chord .chord-mute,
   .att-sidebar-chord .chord-fret-label {
-    fill: #F4F7FB;
+    fill: var(--color-text-primary, #F4F7FB);
     font-size: 10px;
     font-weight: 700;
   }
@@ -5370,10 +5717,11 @@ _SIDEBAR_CHORD_HTML = """
     width: 100%;
     margin-top: 12px;
     padding: 8px 10px;
-    border: 1px solid rgba(246, 173, 73, 0.65);
+    border: 1px solid var(--color-border-subtle, rgba(168, 184, 204, 0.28));
+    border-left: 3px solid var(--color-accent-primary, #F6AD49);
     border-radius: 8px;
-    background: rgba(246, 173, 73, 0.14);
-    color: #F6AD49;
+    background: var(--color-bg-raised, #2A4467);
+    color: var(--color-accent-primary, #F6AD49);
     text-align: left;
   }
   .att-sidebar-chord-disclaimer-lead {
@@ -5385,7 +5733,7 @@ _SIDEBAR_CHORD_HTML = """
   .att-sidebar-chord-disclaimer-body {
     display: block;
     margin-top: 4px;
-    color: #F4F7FB;
+    color: var(--color-text-primary, #F4F7FB);
     font-size: 0.72rem;
     font-weight: 500;
     line-height: 1.35;
@@ -5397,7 +5745,7 @@ _SIDEBAR_CHORD_HTML = """
   <div class="att-sidebar-chord-diagram"></div>
   <div class="att-sidebar-chord-disclaimer" role="note">
     <strong class="att-sidebar-chord-disclaimer-lead">Not reliable</strong>
-    <span class="att-sidebar-chord-disclaimer-body">About 2–3 of every 10 chords are correct. Rough guide only.</span>
+    <span class="att-sidebar-chord-disclaimer-body">Rough guide. Chord names can be wrong.</span>
   </div>
 </div>
 """
@@ -5467,16 +5815,10 @@ def _render_mixer_workspace(browser_id: str | None) -> None:
         return
 
     pro = is_pro_mode(st.session_state)
-    pending_fp = pending_upload_fp_for_stale(st.session_state)
-    show_file_ready_banner = should_hide_stale_results(
-        pending_upload_fp=pending_fp,
-        has_artifacts=True,
-        results_source_fp=st.session_state.get("isolate_results_source_fp"),
-    )
-    if pro and not show_file_ready_banner:
-        st.caption(
-            "New file selected. Mixer still shows the chosen run until you separate again."
-        )
+    # No "New file selected" caption here: a staged file lives on its own draft
+    # tab, so a mix tab never shows an older run in place of it. The old check
+    # was inverted (shown on every finished Pro mix), and fixed it still fired
+    # whenever any other tab held a staged file.
 
     base_name = st.session_state.get("isolate_base_name", "stems")
     st.session_state["isolate_results_fp"] = _artifact_fingerprint(stem_paths)
@@ -5485,6 +5827,151 @@ def _render_mixer_workspace(browser_id: str | None) -> None:
     )
 
     bass_bleed = _load_bass_bleed_diagnostics(artifacts_map)
+
+    if pro:
+        _render_mixer_region_caption(base_name)
+
+    # Mixer first. Guitar fix-up and re-separate used to sit above it, so the
+    # result people waited minutes for was below two panels of repair tooling.
+    # NOTE: media URLs are generated once per session state, but Streamlit fragments
+    # may re-render at different times. If URL generation becomes expensive or stale,
+    # wrap with @st.cache_resource and a TTL.
+    # Lead/Rhythm: say what happened, offer the split on finished songs, and show
+    # either Lead + Rhythm or the single Guitar (never all three: double guitar).
+    weights_diag = _load_json_artifact(artifacts_map or {}, "guitar_weights_diagnostics")
+    if weights_diag.get("fallback"):
+        st.info(
+            str(weights_diag.get("user_message") or "Standard guitar weights were used."),
+            icon=":material/info:",
+        )
+    lr_view = _render_guitar_split_controls(stem_paths, run_dir, artifacts_map or {})
+    mixer_stem_paths = mixer_stems_for_view(stem_paths, lr_view)
+    mixer_media_urls, mixer_download_urls = register_mixer_media(mixer_stem_paths)
+    st.session_state[_DOWNLOAD_STAMPS_KEY] = media_stamps(mixer_stem_paths)
+    # Register the tab PDF during the full-page run. Fragment-scoped media can be
+    # garbage-collected on a later fragment rerun, breaking the link.
+    tab_pdf_url = None
+    tab_pdf_path = run_dir / "tab" / "transcription.pdf"
+    if tab_pdf_path.is_file():
+        try:
+            tab_pdf_url = media_url_for_file(
+                tab_pdf_path, coordinates=f"isolate.tab_pdf.{run_dir.name}"
+            )
+        except Exception:
+            tab_pdf_url = None
+    _mixer_and_downloads_fragment(
+        mixer_stem_paths,
+        base_name=base_name,
+        run_dir=run_dir,
+        media_urls=mixer_media_urls,
+        download_urls=mixer_download_urls,
+        tab_pdf_url=tab_pdf_url,
+    )
+
+    _render_mix_tools(
+        stem_paths,
+        run_dir=run_dir,
+        artifacts_map=artifacts_map or {},
+        bass_bleed=bass_bleed,
+        pro=pro,
+    )
+
+
+MIX_TOOL_KEY = "isolate_mix_tool"
+_MIX_TOOL_LABELS = {
+    "guitar": "Guitar tools",
+    "studio": "Song studio",
+    "tracks": "Add tracks",
+    "reseparate": "Break down a stem",
+    "tab_pdf": "Tab PDF",
+}
+
+
+def _render_mix_tools(
+    stem_paths: dict[str, Path],
+    *,
+    run_dir: Path,
+    artifacts_map: dict,
+    bass_bleed: dict,
+    pro: bool,
+) -> None:
+    """Everything after the mixer behind one selector, one panel at a time.
+
+    Song studio, Guitar fix-up, extra tracks, re-separate and Tab PDF used to
+    stack under the mixer as separate panels (I-635). Lite and Pro share this;
+    Pro adds re-separate.
+    """
+    carry_path, carry_name, carry_is_stem = resolve_tab_pdf_carry_from_isolate(
+        st.session_state
+    )
+    options = ["guitar", "studio", "tracks"]
+    if "guitar" not in stem_paths:
+        options.remove("guitar")
+    if pro:
+        options.append("reseparate")
+    if carry_path:
+        options.append("tab_pdf")
+    flagged = bool(bass_bleed.get("flagged")) and "guitar" in options
+    # A flagged guitar opens Guitar tools once per run, as the fix-up
+    # expander used to; after that the user's choice wins.
+    opened_key = f"_isolate_mix_tool_autoopened_{run_dir.name}"
+    if flagged and not st.session_state.get(opened_key):
+        st.session_state[opened_key] = True
+        st.session_state[MIX_TOOL_KEY] = "guitar"
+    if st.session_state.get(MIX_TOOL_KEY) not in (None, *options):
+        st.session_state.pop(MIX_TOOL_KEY, None)
+    tool = st.segmented_control(
+        "More tools",
+        options=options,
+        format_func=lambda key: _MIX_TOOL_LABELS[key],
+        key=MIX_TOOL_KEY,
+    )
+    if tool is not None:
+        _render_mix_tool_panel(
+            tool, stem_paths, run_dir, artifacts_map, bass_bleed, carry=(carry_path, carry_name, carry_is_stem)
+        )
+    # Below the panel, so switching tools never pushes the panel down. Lite gets
+    # plain words; the engine's measurement is Pro detail.
+    if flagged and tool != "guitar":
+        if pro:
+            reason = bass_bleed.get("reason", "this track may contain extra bass bleed")
+            st.caption(f"Guitar check: {reason}. Open **Guitar tools** to adjust without re-separating.")
+        else:
+            st.caption(
+                "The guitar track may carry some bass. **Guitar tools** can clean it up "
+                "without separating again."
+            )
+
+
+def _render_mix_tool_panel(
+    tool: str,
+    stem_paths: dict[str, Path],
+    run_dir: Path,
+    artifacts_map: dict,
+    bass_bleed: dict,
+    *,
+    carry: tuple[str, str, bool],
+) -> None:
+    carry_path, carry_name, carry_is_stem = carry
+    with st.container(border=True, key="isolate_mix_tool_panel"):
+        if tool == "guitar":
+            _render_guitar_split_offer(stem_paths, run_dir, artifacts_map)
+            _render_guitar_fixup_panel(
+                stem_paths, run_dir, artifacts_map, bass_bleed, framed=False
+            )
+        elif tool == "studio":
+            from ui.studio_panel import render_song_studio
+
+            render_song_studio(run_dir)
+        elif tool == "tracks":
+            _render_extra_tracks_uploader(run_dir)
+        elif tool == "reseparate":
+            _render_reseparate_panel(stem_paths, run_dir, framed=False)
+        elif tool == "tab_pdf":
+            _render_tab_pdf_carry(carry_path, carry_name, carry_is_stem)
+
+
+def _render_extra_tracks_uploader(run_dir: Path) -> None:
     extra_uploads = st.file_uploader(
         "Add extra tracks",
         type=["mp3", "wav", "flac", "m4a"],
@@ -5502,61 +5989,10 @@ def _render_mixer_workspace(browser_id: str | None) -> None:
         if saved:
             st.caption("Extra tracks: " + ", ".join(Path(path).name for path in saved))
 
-    if pro:
-        _render_mixer_region_caption(base_name)
 
-    # Mixer first. Guitar fix-up and re-separate used to sit above it, so the
-    # result people waited minutes for was below two panels of repair tooling.
-    # NOTE: media URLs are generated once per session state, but Streamlit fragments
-    # may re-render at different times. If URL generation becomes expensive or stale,
-    # wrap with @st.cache_resource and a TTL.
-    mixer_media_urls, mixer_download_urls = register_mixer_media(stem_paths)
-    # Register the tab PDF during the full-page run. Fragment-scoped media can be
-    # garbage-collected on a later fragment rerun, breaking the link.
-    tab_pdf_url = None
-    tab_pdf_path = run_dir / "tab" / "transcription.pdf"
-    if tab_pdf_path.is_file():
-        try:
-            tab_pdf_url = media_url_for_file(
-                tab_pdf_path, coordinates=f"isolate.tab_pdf.{run_dir.name}"
-            )
-        except Exception:
-            tab_pdf_url = None
-    _mixer_and_downloads_fragment(
-        stem_paths,
-        base_name=base_name,
-        run_dir=run_dir,
-        media_urls=mixer_media_urls,
-        download_urls=mixer_download_urls,
-        tab_pdf_url=tab_pdf_url,
-    )
-
-    with st.expander("Song studio", expanded=False):
-        from ui.studio_panel import render_song_studio
-
-        render_song_studio(run_dir)
-
-    if pro and bass_bleed.get("flagged"):
-        st.warning(
-            "Guitar check: "
-            f"{bass_bleed.get('reason', 'this track may contain extra bass bleed')} "
-            "Use **Guitar fix-up** below to adjust without re-separating."
-        )
-
-    if pro:
-        _render_guitar_fixup_panel(stem_paths, run_dir, artifacts_map or {}, bass_bleed)
-        _render_reseparate_panel(stem_paths, run_dir)
-    else:
-        # Lite: single expander (the inner one from _render_guitar_fixup_panel)
-        # Auto-opens when bass bleed is flagged. No re-separate panel.
-        _render_guitar_fixup_panel(stem_paths, run_dir, artifacts_map or {}, bass_bleed)
-
-    carry_path, carry_name, carry_is_stem = resolve_tab_pdf_carry_from_isolate(
-        st.session_state
-    )
+def _render_tab_pdf_carry(carry_path: str, carry_name: str, carry_is_stem: bool) -> None:
+    st.caption("Turn this song into a guitar tab PDF.")
     if carry_path:
-        st.divider()
-        st.caption("Other tools")
         if st.button("Make a tab PDF from this →"):
             st.session_state["carry_over_audio_path"] = carry_path
             st.session_state["carry_over_audio_name"] = carry_name
@@ -5573,15 +6009,18 @@ def _render_file_ready_banner() -> None:
         results_source_fp=st.session_state.get("isolate_results_source_fp"),
     ):
         return
-    if is_pro_mode(st.session_state):
-        st.info(
-            f"**{_staged_source_name()}** is ready. Click **Separate tracks** on Home to "
-            "replace the current results. Existing stems stay on disk until the new job finishes."
-        )
-    else:
-        st.info(
-            f"**{_staged_source_name()}** is ready. Click **Separate tracks** on Home to start."
-        )
+    # A toast per staged file, not a banner on every rerun: the banner pushed the
+    # form down while the condition held (I-628). The button is on this page,
+    # further down, not on the Home tab (I-636).
+    toasted = st.session_state.get(_FILE_READY_TOASTED_KEY)
+    if toasted == pending_fp:
+        return
+    st.session_state[_FILE_READY_TOASTED_KEY] = pending_fp
+    # Each draft tab becomes its own run tab, so nothing is replaced; the old
+    # Pro copy ("replaces the current results") predates tabs.
+    st.toast(
+        f"**{_staged_source_name()}** is ready. Pick what you want, then **Separate tracks** below."
+    )
 
 
 def main() -> None:
@@ -5644,18 +6083,22 @@ def main() -> None:
             _refresh_isolate_from_disk(browser_id)
         _render_busy_tab_close_prompt(owner)
 
-    _poll_running_jobs()
+    _mount_job_poll()
+    _mount_opened_audio_watch()
+    # Toasts float over the page; inline banners shifted everything below them.
     if flash := st.session_state.pop("isolate_flash", None):
-        st.success(flash)
+        st.toast(flash)
     else:
         _render_file_ready_banner()
     if notice := st.session_state.pop(MIX_TAB_NOTICE_KEY, None):
-        st.info(str(notice))
+        st.toast(str(notice), duration="long")
 
     shell = apply_shell_view(st.session_state)
 
     if shell == "mix":
         _render_mixer_workspace(owner)
+    elif _active_tab_job() is not None:
+        _mount_working_card()
     else:
         try:
             _render_new_workspace(demucs_ok)

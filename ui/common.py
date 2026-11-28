@@ -30,6 +30,8 @@ def _resolve_data_dir() -> Path:
 
 DATA_DIR = _resolve_data_dir()
 _META_FILENAME = "meta.json"
+# Subfolders of DATA_DIR that "Clear local run data" must never touch.
+_RESERVED_SUBDIRS = frozenset({"isolate_jobs", "library_trash", "region_previews"})
 
 # Streamlit ``type=`` for uploaders. Include the ``audio`` shortcut (→ ``audio/*``)
 # so OS/native pickers (incl. pywebview on macOS) grey out non-audio files; keep
@@ -165,6 +167,28 @@ def rename_run_title(run_dir: Path, new_title: str) -> bool:
     return True
 
 
+def update_run_artifacts(run_dir: Path, updates: dict[str, str]) -> bool:
+    """Add or replace entries in a run's ``meta.json`` ``artifacts``, keeping the rest.
+
+    Used when a post-separation action (e.g. the lead/rhythm split) writes new
+    files next to an existing run, so reopening it from the library shows them.
+    """
+    if not run_dir or not updates:
+        return False
+    meta_path = Path(run_dir) / _META_FILENAME
+    if not meta_path.is_file():
+        return False
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    artifacts = dict(meta.get("artifacts") or {})
+    artifacts.update({str(k): str(v) for k, v in updates.items()})
+    meta["artifacts"] = artifacts
+    meta_path.write_text(json.dumps(meta), encoding="utf-8")
+    return True
+
+
 def list_recent_runs(
     page: str,
     limit: int = 10,
@@ -245,11 +269,21 @@ def delete_run(run_dir: str | Path) -> bool:
     return not path.exists()
 
 
-def clear_all_local_runs() -> tuple[int, int]:
-    """Delete every direct child run directory under ``DATA_DIR``.
+def _is_clearable_run(path: Path) -> bool:
+    """A run folder with readable metadata that is not a library song."""
+    try:
+        meta = json.loads((path / _META_FILENAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(meta, dict) and meta.get("page") != "isolate"
 
-    Returns ``(deleted_ok, failed)``. Does not remove ``DATA_DIR`` itself or
-    files that are not directories. Used by Desktop Settings (compliance C20).
+
+def clear_all_local_runs() -> tuple[int, int]:
+    """Delete run folders under ``DATA_DIR`` that are not library songs.
+
+    Library songs (``page == "isolate"``), the reserved subfolders, folders
+    without readable ``meta.json`` and loose files are all kept.
+    Returns ``(deleted_ok, failed)``. Used by Desktop Settings (compliance C20).
     """
     data_root = DATA_DIR.resolve()
     if not data_root.is_dir():
@@ -257,7 +291,9 @@ def clear_all_local_runs() -> tuple[int, int]:
     deleted = 0
     failed = 0
     for child in list(data_root.iterdir()):
-        if not child.is_dir():
+        if child.name in _RESERVED_SUBDIRS or child.is_symlink() or not child.is_dir():
+            continue
+        if not _is_clearable_run(child):
             continue
         if delete_run(child):
             deleted += 1

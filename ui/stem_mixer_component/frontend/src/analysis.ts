@@ -1,7 +1,5 @@
 /** Pure practice-panel helpers. No DOM, no audio — safe to unit test later. */
 
-export type ChordLevel = "simple" | "medium" | "chart";
-
 export type ChordEvent = {
   start: number;
   end: number;
@@ -119,6 +117,25 @@ export function formatChordSymbol(raw: unknown): string {
     .replace(/:dim\b/g, "dim")
     .replace(/:aug\b/g, "aug")
     .replace(/:7\b/g, "7");
+}
+
+/**
+ * The product's chord name: root in sharps plus "m" for a minor third (F, F#m).
+ * Sevenths, suspensions, power chords and slash basses are dropped. Mirrors
+ * audio_to_tab.chord_symbols.basic_from_text. Text with no readable root is
+ * returned as it is; no chord is "N".
+ */
+export function basicChordSymbol(raw: unknown): string {
+  const formatted = formatChordSymbol(raw);
+  if (formatted === "—") return "N";
+  const head = (formatted.split("/")[0] ?? "").trim();
+  const match = head.match(/^([A-Ga-g])([#b]?)(.*)$/);
+  if (!match) return formatted;
+  const pc = ROOT_PC[match[1]!.toUpperCase() + (match[2] ?? "")];
+  if (pc === undefined) return formatted;
+  const quality = (match[3] ?? "").trim();
+  const minor = /^(m(?!aj)|dim|°|o$)/.test(quality);
+  return PC_NAME[pc]! + (minor ? "m" : "");
 }
 
 /** Clamp an A/B region to the song; null when unusable (min 0.5 s). */
@@ -334,79 +351,11 @@ export function capoLabel(capo: number): string {
   return fret === 0 ? "No capo" : `Capo ${fret}`;
 }
 
-/** Accept a typed chord, or null when it is not a symbol this sheet can draw. */
+/** Accept a typed chord as its basic name (C, F#m), or null when it has no readable root. */
 export function replaceChordSymbol(current: string, typed: string): string | null {
   void current;
-  const formatted = formatChordSymbol(typed);
-  if (!formatted || formatted === "—") return null;
-  const [headRaw, bassRaw] = formatted.split("/");
-  const headMatch = (headRaw ?? "").trim().match(/^([A-Ga-g])([#b]?)(.*)$/);
-  if (!headMatch) return null;
-  const head = headMatch[1]!.toUpperCase() + (headMatch[2] ?? "") + (headMatch[3] ?? "");
-  if (!parseChord(head)) return null;
-  if (!bassRaw) return head;
-  const bassMatch = bassRaw.trim().match(/^([A-Ga-g])([#b]?)$/);
-  if (!bassMatch) return null;
-  return `${head}/${bassMatch[1]!.toUpperCase()}${bassMatch[2] ?? ""}`;
-}
-
-const PC_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
-
-export type Spelling = "sharp" | "flat";
-
-export function spellPitchClass(pc: number, spelling: Spelling): string {
-  const names = spelling === "flat" ? PC_FLAT : PC_NAME;
-  const index = ((Math.round(pc) % 12) + 12) % 12;
-  return names[index]!;
-}
-
-const PC_FROM_NAME: Record<string, number> = {
-  C: 0,
-  "C#": 1,
-  Db: 1,
-  D: 2,
-  "D#": 3,
-  Eb: 3,
-  E: 4,
-  F: 5,
-  "F#": 6,
-  Gb: 6,
-  G: 7,
-  "G#": 8,
-  Ab: 8,
-  A: 9,
-  "A#": 10,
-  Bb: 10,
-  B: 11,
-};
-
-export function spellChordSymbol(symbol: string, spelling: Spelling): string {
-  const formatted = formatChordSymbol(symbol);
-  if (formatted === "—") return formatted;
-  const rewrite = (token: string): string => {
-    const match = token.match(/^([A-Ga-g][#b]?)(.*)$/);
-    if (!match) return token;
-    const raw = match[1] ?? "";
-    const name = raw.charAt(0).toUpperCase() + raw.slice(1);
-    const pc = PC_FROM_NAME[name];
-    if (pc === undefined) return token;
-    return spellPitchClass(pc, spelling) + (match[2] ?? "");
-  };
-  const [head, bass] = formatted.split("/");
-  const next = rewrite(head ?? "");
-  return bass ? `${next}/${rewrite(bass)}` : next;
-}
-
-/** Easy is a triad or sus. Medium is a 6th or 7th. Everything else is Hard. */
-export function chordDifficulty(symbol: string): "" | "Easy" | "Medium" | "Hard" {
-  const formatted = formatChordSymbol(symbol);
-  if (!formatted || formatted === "—") return "";
-  const quality = (formatted.split("/")[0] ?? "").replace(/^[A-G][#b]?/, "");
-  if (quality === "" || quality === "m" || quality === "5" || quality === "sus2" || quality === "sus4") {
-    return "Easy";
-  }
-  if (["6", "m6", "7", "maj7", "m7", "add9"].includes(quality)) return "Medium";
-  return "Hard";
+  const basic = basicChordSymbol(typed);
+  return /^[A-G]#?m?$/.test(basic) ? basic : null;
 }
 
 export const CAPO_PRESETS = [
@@ -502,12 +451,7 @@ export function scrollLeftToCenter(
   return Math.max(0, Math.min(target, max));
 }
 
-/** Symbol for the selected display level. An empty reduced form falls back to the chart symbol. */
-export function displaySymbol(
-  chord: { symbol: string; simple?: string; medium?: string },
-  level: ChordLevel
-): string {
-  if (level === "simple" && chord.simple) return chord.simple;
-  if (level === "medium" && chord.medium) return chord.medium;
-  return chord.symbol;
+/** Name to show for a chord event: always the basic name (root + optional m). */
+export function displaySymbol(chord: { symbol: string }): string {
+  return basicChordSymbol(chord.symbol);
 }

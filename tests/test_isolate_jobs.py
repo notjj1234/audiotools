@@ -1942,3 +1942,170 @@ def test_harmony_source_keeps_other_when_no_guitar(tmp_path: Path):
     harmony, _vocals, _metro, kind = jobs._analysis_sources(artifacts, tmp_path / "missing.wav")
     assert kind == "other"
     assert harmony == other
+
+
+# --- Storage hygiene: checkpoints and job records ---
+
+
+def _seed_job(root: Path, job_id: str, status: str, *, stems: bool = True, start_sec: float = 0.0) -> Path:
+    """A job folder with a checkpoint, pointing at ``root/<job_id>-run``."""
+    import ui.isolate_jobs as jobs
+
+    run = root / f"{job_id}-run"
+    run.mkdir()
+    wav = run / "vocals.wav"
+    if stems:
+        wav.write_bytes(b"stem")
+    jobs._ensure_job_dir(job_id)
+    spec = IsolateJobSpec(
+        id=job_id,
+        audio_path=str(run / "src.wav"),
+        output_dir=str(run),
+        title=job_id,
+        start_sec=start_sec,
+    )
+    jobs._write_json(jobs._spec_path(job_id), spec.to_dict())
+    extra = {"run_dir": str(run), "artifacts": {"vocals": str(wav)}} if status == "succeeded" else {}
+    jobs.write_status(job_id, status=status, **extra)
+    checkpoint = jobs._checkpoint_dir(job_id)
+    (checkpoint / "demucs_out").mkdir(parents=True)
+    (checkpoint / "demucs_out" / "vocals.wav").write_bytes(b"x" * 100)
+    return run
+
+
+def _run_mock_job(root: Path, monkeypatch, *, write_stem: bool) -> str:
+    import ui.isolate_jobs as jobs
+
+    audio = root / "song.wav"
+    audio.write_bytes(b"wav")
+    out = root / "out"
+    out.mkdir()
+
+    def fake_separate(*, output_dir, checkpoint_dir, **kwargs):
+        Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        (Path(checkpoint_dir) / "trimmed.wav").write_bytes(b"t")
+        dest = Path(output_dir) / "vocals.wav"
+        if write_stem:
+            dest.write_bytes(b"v")
+        return {"vocals": dest}
+
+    monkeypatch.setattr("audio_to_tab.isolate.separate_stems", fake_separate)
+    monkeypatch.setattr("audio_to_tab.hardware.get_desktop_probe", lambda: MagicMock())
+    monkeypatch.setattr("audio_to_tab.hardware.resolve_safe_device", lambda device, probe: device)
+    monkeypatch.setattr("ui.media.cleanup_mix_artifacts", lambda *_a, **_k: None)
+    monkeypatch.setattr("ui.common.write_run_metadata", lambda *_a, **_k: None)
+    monkeypatch.setattr(jobs, "_run_analysis_stage", lambda *a, **k: (None, None, None, None))
+    monkeypatch.setattr(jobs, "_run_tab_stage", lambda *a, **k: ({}, None))
+    jobs._ensure_job_dir("mock1")
+    spec = IsolateJobSpec(id="mock1", audio_path=str(audio), output_dir=str(out), title="Mock")
+    jobs._write_json(jobs._spec_path("mock1"), spec.to_dict())
+    jobs.write_status("mock1", status="queued")
+    jobs._run_one_job("mock1")
+    return "mock1"
+
+
+def test_successful_job_drops_its_checkpoint_and_keeps_the_records(jobs_dir: Path, monkeypatch):
+    import ui.isolate_jobs as jobs
+
+    job_id = _run_mock_job(jobs_dir, monkeypatch, write_stem=True)
+    assert read_status(job_id)["status"] == "succeeded", read_status(job_id)
+    assert not jobs._checkpoint_dir(job_id).exists()
+    assert jobs._status_path(job_id).is_file()
+    assert jobs._spec_path(job_id).is_file()
+    assert (jobs_dir / "out" / "vocals.wav").is_file()
+
+
+def test_successful_job_with_missing_stems_keeps_its_checkpoint(jobs_dir: Path, monkeypatch):
+    import ui.isolate_jobs as jobs
+
+    job_id = _run_mock_job(jobs_dir, monkeypatch, write_stem=False)
+    assert read_status(job_id)["status"] == "succeeded", read_status(job_id)
+    assert (jobs._checkpoint_dir(job_id) / "trimmed.wav").is_file()
+
+
+def test_finalize_after_child_exit_drops_the_checkpoint(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    run = _seed_job(jobs_dir, "fin1", "running")
+    jobs._finalize_job_after_process("fin1")
+    assert read_status("fin1")["status"] == "succeeded"
+    assert not jobs._checkpoint_dir("fin1").exists()
+    assert (run / "vocals.wav").is_file()
+
+
+def test_paused_job_keeps_its_checkpoint_and_resumes(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    _seed_job(jobs_dir, "p1", "pausing")
+    jobs._finalize_job_after_process("p1")
+    assert read_status("p1")["status"] == "paused"
+    assert jobs.reclaim_checkpoints() == (0, 0)
+    assert jobs._checkpoint_dir("p1").is_dir()
+    assert resume_job("p1") is True
+    assert read_status("p1")["status"] == "queued"
+    assert jobs._checkpoint_dir("p1").is_dir()
+
+
+def test_prune_checkpoint_twice_does_not_raise(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    _seed_job(jobs_dir, "t1", "succeeded")
+    assert jobs._prune_checkpoint("t1") == 100
+    assert jobs._prune_checkpoint("t1") == 0
+    assert jobs._prune_checkpoint("never-existed") == 0
+
+
+def test_prune_checkpoint_refuses_ids_that_leave_the_jobs_folder(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    outside = jobs_dir / "checkpoint"
+    outside.mkdir()
+    (outside / "keep.wav").write_bytes(b"k")
+    for bad in ("..", ".", "", "a/b"):
+        assert jobs._prune_checkpoint(bad) == 0
+    assert (outside / "keep.wav").is_file()
+
+
+def test_reclaim_checkpoints_frees_succeeded_jobs_only(jobs_dir: Path):
+    import shutil
+
+    import ui.isolate_jobs as jobs
+
+    done = _seed_job(jobs_dir, "done", "succeeded")
+    orphan = _seed_job(jobs_dir, "orphan", "succeeded")
+    shutil.rmtree(orphan)
+    _seed_job(jobs_dir, "nostems", "succeeded", stems=False)
+    for status in ("queued", "running", "pausing", "paused", "failed"):
+        _seed_job(jobs_dir, status, status)
+
+    assert jobs.reclaim_checkpoints() == (2, 200)
+    assert jobs.reclaim_checkpoints() == (0, 0)
+    for job_id in ("nostems", "queued", "running", "pausing", "paused", "failed"):
+        assert jobs._checkpoint_dir(job_id).is_dir(), job_id
+    assert jobs._status_path("done").is_file()
+    assert jobs._status_path("orphan").is_file()
+    assert (done / "vocals.wav").is_file()
+
+
+def test_forget_jobs_for_run_removes_the_record_and_leaves_the_run(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    run = _seed_job(jobs_dir, "f1", "succeeded")
+    other = _seed_job(jobs_dir, "f2", "succeeded")
+    assert jobs.forget_jobs_for_run(run) == 1
+    assert not jobs._job_dir("f1").exists()
+    assert (run / "vocals.wav").read_bytes() == b"stem"
+    assert jobs._job_dir("f2").is_dir()
+    assert (other / "vocals.wav").is_file()
+    assert jobs.forget_jobs_for_run(run) == 0
+    assert jobs.forget_jobs_for_run("") == 0
+
+
+def test_forget_jobs_for_run_keeps_the_video_offset(jobs_dir: Path):
+    import ui.isolate_jobs as jobs
+
+    run = _seed_job(jobs_dir, "v1", "succeeded", start_sec=12.5)
+    jobs.forget_jobs_for_run(run)
+    assert video_offset_sec_for_run(run) == 12.5
+    assert video_offset_sec_for_run(jobs_dir / "another") == 0.0
+    assert list_jobs() == []

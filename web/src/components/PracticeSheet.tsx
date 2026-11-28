@@ -13,7 +13,6 @@ import {
   scrollLeftToCenter,
   sectionAt,
   type AnalysisData,
-  type ChordLevel,
   type ChordShape,
   type TabData,
 } from "../mixer/analysis";
@@ -125,7 +124,6 @@ export function PracticeSheet({
 }) {
   const [panel, setPanel] = useState<PracticeTab>("chords");
   const [capo, setCapo] = useState(0);
-  const [level, setLevel] = useState<ChordLevel>("medium");
   const [edits, setEdits] = useState<Record<number, string>>({});
   const [draft, setDraft] = useState<{ index: number; value: string } | null>(null);
   const [frame, setFrame] = useState(0);
@@ -161,7 +159,7 @@ export function PracticeSheet({
   indexRef.current = advanceChordIndex(chords, indexRef.current, playhead);
   const activeIndex = chords.length ? indexRef.current : -1;
   const current = activeIndex >= 0 ? chords[activeIndex] : undefined;
-  const sounding = current ? symbolAt(activeIndex, displaySymbol(current, level)) : "—";
+  const sounding = current ? symbolAt(activeIndex, displaySymbol(current)) : "—";
   const diagramSymbol = sounding !== "—" ? capoDiagramSymbol(sounding, capo) : "";
 
   useEffect(() => {
@@ -222,22 +220,6 @@ export function PracticeSheet({
                 ))}
               </select>
             </label>
-            <label className="capo-label">
-              <span className="visually-hidden">Chord detail</span>
-              <select
-                id="chord-level"
-                aria-label="Chord detail"
-                value={level}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setLevel(next === "simple" || next === "medium" ? next : "chart");
-                }}
-              >
-                <option value="simple">Simple</option>
-                <option value="medium">Medium</option>
-                <option value="chart">Chart</option>
-              </select>
-            </label>
           </div>
         </div>
         <div
@@ -252,7 +234,7 @@ export function PracticeSheet({
             const shown =
               draft?.index === index
                 ? draft.value
-                : symbolAt(index, displaySymbol(chord, level));
+                : symbolAt(index, displaySymbol(chord));
             return (
               <div
                 className={index === activeIndex ? "chord-chip active" : "chord-chip"}
@@ -265,7 +247,7 @@ export function PracticeSheet({
                   value={shown}
                   onChange={(event) => setDraft({ index, value: event.target.value })}
                   onBlur={(event) => {
-                    const baseline = symbolAt(index, displaySymbol(chord, level));
+                    const baseline = symbolAt(index, displaySymbol(chord));
                     if (event.currentTarget.value.trim() === baseline) return;
                     commit(index, event.currentTarget.value, chord.symbol);
                   }}

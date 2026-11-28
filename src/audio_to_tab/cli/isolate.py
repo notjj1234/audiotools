@@ -94,11 +94,13 @@ def main() -> None:
     )
     parser.add_argument(
         "--lead-rhythm-mode",
-        choices=["confident", "best_effort"],
+        choices=["confident", "prefer_split", "best_effort"],
         default="confident",
         help=(
             "Lead/Rhythm emit policy (default: confident). confident skips low-confidence "
-            "splits; best_effort always writes lead_guitar/rhythm_guitar when possible."
+            "splits; prefer_split (what the app uses) splits whenever two distinct parts "
+            "are found, labelling uncertain roles as a best guess; best_effort always "
+            "writes lead_guitar/rhythm_guitar when possible."
         ),
     )
     parser.add_argument(

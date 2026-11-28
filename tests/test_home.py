@@ -176,12 +176,49 @@ def test_home_v2_does_not_block_on_automatic_analysis():
     app = (root / "ui" / "app.py").read_text(encoding="utf-8")
     assert "start_background_analysis(" in app
     assert "_mount_analysis_status()" in app
-    assert "run_every=2.0" in app
+    assert "ANALYSIS_POLL_ACTIVE_SECONDS = 2.0" in app
+    assert "st.fragment(_analysis_status_body, run_every=interval)()" in app
+    assert 'key="att_analysis_status_slot"' in app
     jobs = (root / "ui" / "isolate_jobs.py").read_text(encoding="utf-8")
     poll = jobs[jobs.find("def _poll_background_analysis") : jobs.find("def start_background_analysis")]
     assert "st.rerun" not in poll
     assert "proc.join()" not in poll
     assert "is_alive(" in poll
+
+
+def test_ui_style_blocks_contain_no_tag_like_text():
+    """st.html sanitizes markup: a '<span>' even inside a CSS comment drops the
+    whole style block, which silently unstyled the app once."""
+    import re
+
+    root = Path(__file__).resolve().parents[1] / "ui"
+    offenders = []
+    for path in root.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        for match in re.finditer(r"<style[^>]*>(.*?)</style>", source, re.S):
+            if re.search(r"<[A-Za-z/!]", match.group(1)):
+                offenders.append(f"{path.name}:{source[: match.start()].count(chr(10)) + 1}")
+    assert offenders == []
+
+
+def test_analysis_poll_interval_mounts_no_timer_when_fully_idle():
+    from ui.pages.home import analysis_poll_interval
+
+    def interval(status, jobs_running=False):
+        return analysis_poll_interval(
+            status, jobs_running=jobs_running, active_seconds=2.0, idle_seconds=6.0
+        )
+
+    analysing = {"state": "analysing", "title": "Song", "remaining": 2}
+    assert interval(analysing) == 2.0
+    assert interval({"state": "waiting", "remaining": 1}) == 2.0
+    # Pending work with nothing on screen yet still checks, slowly.
+    assert interval({"state": "waiting", "remaining": 0}) == 6.0
+    # A job in flight can hand off to analysis without a rerun.
+    assert interval({"state": "idle"}, jobs_running=True) == 6.0
+    assert interval({"state": "idle", "remaining": 0}) is None
+    assert interval({}) is None
+    assert interval(None) is None
 
 
 def test_home_source_has_learn_practice_and_analyse_actions():
@@ -811,3 +848,58 @@ def test_home_files_toolbar_is_minimal():
     assert frontend.count('send(nonce, "new_setlist"') == 1
     new_at = frontend.index('send(nonce, "new_setlist"')
     assert "paint(lastProps)" in frontend[new_at - 80 : new_at]
+
+
+def test_deleting_a_song_forgets_its_job_record(tmp_path, monkeypatch):
+    import ui.isolate_jobs as jobs
+    from ui.pages.home import apply_library_deletes
+
+    monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
+    run = tmp_path / "song"
+    run.mkdir()
+    (run / "meta.json").write_text("{}", encoding="utf-8")
+    jobs._ensure_job_dir("s1")
+    jobs.write_status("s1", status="succeeded", run_dir=str(run))
+    (jobs.jobs_root() / "s1" / "checkpoint").mkdir()
+
+    assert apply_library_deletes({"t": str(run)}, "t", data_dir=tmp_path, status=None) == (1, 0)
+    assert not (jobs.jobs_root() / "s1").exists()
+    assert (tmp_path / "library_trash" / "song" / "meta.json").is_file()
+
+
+def test_opening_from_home_right_after_launch_keeps_saved_tabs(tmp_path, monkeypatch):
+    """The app opens on Home; opening a song there used to replace every saved tab.
+
+    Only Isolate restored the strip, so Home's add landed on an empty list,
+    Isolate then skipped its restore, and the one-tab list was saved over disk.
+    """
+    import ui.pages.home as home
+    from ui.isolate_state import (
+        ISOLATE_UI_STATE_FILENAME,
+        OPEN_MIX_TABS_KEY,
+        is_new_draft_tab,
+    )
+
+    saved = [tmp_path / "arctic", tmp_path / "nirvana"]
+    for run in saved:
+        run.mkdir()
+    opened = tmp_path / "creeping"
+    opened.mkdir()
+    (tmp_path / ISOLATE_UI_STATE_FILENAME).write_text(
+        json.dumps({"open_mix_tabs": [str(p) for p in saved], "shell_tab": str(saved[1])}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(home, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(home, "_go", lambda _page: None)
+
+    session: dict = {}
+    monkeypatch.setattr(home.st, "session_state", session)
+    home.open_saved_run(str(opened))
+    assert session[OPEN_MIX_TABS_KEY] == [str(p) for p in (*saved, opened)]
+
+    session = {}
+    monkeypatch.setattr(home.st, "session_state", session)
+    home.open_new_separation()
+    tabs = session[OPEN_MIX_TABS_KEY]
+    assert tabs[:2] == [str(p) for p in saved]
+    assert len(tabs) == 3 and is_new_draft_tab(tabs[2])

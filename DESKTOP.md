@@ -47,7 +47,9 @@ chmod +x scripts/dev.sh
 
 If PowerShell blocks scripts: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
-`tester` runs: preflight → create `.venv311` + install Demucs if needed → download models once → open Streamlit at **http://127.0.0.1:8501**.
+`tester` runs: preflight → create `.venv311` + install Demucs if needed → download models once → open Streamlit at **http://127.0.0.1:8521**.
+
+Audio Tools uses ports **8521–8525** (native launcher and `make ui` / `tester`). That keeps it separate from the sibling **Audio Tabs** app, which uses **8501–8510**.
 
 Contributor install (tests/eval extras): `make install` / `./scripts/dev.sh install` / `.\scripts\dev.ps1 install`.
 

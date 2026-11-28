@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import * as desktop from "../../../ui/stem_mixer_component/frontend/src/analysis";
 import {
   advanceChordIndex,
+  basicChordSymbol,
   capoDiagramSymbol,
   capoLabel,
   chartTimeSeconds,
   CHORD_DIAGRAM_LAYOUT,
-  chordDifficulty,
   chordShape,
   displaySymbol,
   formatBassTab,
@@ -16,7 +16,6 @@ import {
   replaceChordSymbol,
   replaceMeasureText,
   scrollLeftToCenter,
-  spellChordSymbol,
 } from "./analysis";
 
 const samples = ["Am", "G", "F#m", "Bb", "Cmaj7", "Am/G", "N", "nope", "   "];
@@ -50,8 +49,35 @@ describe("website chord helpers match the desktop sheet", () => {
     }
   });
 
-  it("accepts a typed symbol and rejects a blank or unusable one", () => {
+  it("names every chord by its root plus an optional m, in sharps", () => {
+    const cases: Array<[string, string]> = [
+      ["C", "C"],
+      ["Cmaj7", "C"],
+      ["F#7", "F#"],
+      ["Bb", "A#"],
+      ["Bbm7", "A#m"],
+      ["E5", "E"],
+      ["Csus4", "C"],
+      ["C/E", "C"],
+      ["Bdim", "Bm"],
+      ["F#m7b5", "F#m"],
+      ["CmMaj7", "Cm"],
+      ["Am/G", "Am"],
+      ["C:min", "Cm"],
+      ["N", "N"],
+      ["", "N"],
+    ];
+    for (const [raw, expected] of cases) {
+      expect(basicChordSymbol(raw)).toBe(expected);
+      expect(desktop.basicChordSymbol(raw)).toBe(expected);
+    }
+  });
+
+  it("accepts a typed symbol as its basic name and rejects a blank or unusable one", () => {
     expect(replaceChordSymbol("Am", "C")).toBe("C");
+    expect(replaceChordSymbol("Am", "Bbmaj7")).toBe("A#");
+    expect(replaceChordSymbol("Am", "Am/G")).toBe("Am");
+    expect(replaceChordSymbol("Am", "nope")).toBeNull();
     expect(replaceChordSymbol("Am", "C")).toBe(desktop.replaceChordSymbol("Am", "C"));
     expect(replaceChordSymbol("Am", "   ")).toBeNull();
     expect(replaceChordSymbol("Am", "")).toBeNull();
@@ -61,18 +87,12 @@ describe("website chord helpers match the desktop sheet", () => {
     }
   });
 
-  it("spells flats, rates difficulty, formats bass, and offsets 432 Hz", () => {
-    expect(spellChordSymbol("F#", "flat")).toBe("Gb");
-    expect(spellChordSymbol("Bb", "sharp")).toBe("A#");
-    expect(chordDifficulty("Am")).toBe("Easy");
-    expect(chordDifficulty("Cmaj7")).toBe("Medium");
-    expect(chordDifficulty("C9")).toBe("Hard");
+  it("formats bass and offsets 432 Hz", () => {
     expect(formatBassTab([28])).toBe("G|-\nD|-\nA|-\nE|0");
     expect(listenCents(440)).toBe(0);
     expect(listenCents(432)).toBeLessThan(0);
     expect(replaceMeasureText("0-2", "1-3")).toBe("1-3");
     expect(replaceMeasureText("0-2", "hello")).toBeNull();
-    expect(spellChordSymbol("F#", "flat")).toBe(desktop.spellChordSymbol("F#", "flat"));
     expect(formatBassTab([28, 43])).toBe(desktop.formatBassTab([28, 43]));
   });
 
@@ -88,9 +108,10 @@ describe("website chord helpers match the desktop sheet", () => {
     expect(latency).toBe(40);
     expect(latency).toBe(desktop.outputLatencyMs({ outputLatency: 0.04 }, 0));
     expect(outputLatencyMs({ outputLatency: 9 }, 0)).toBe(250);
-    expect(displaySymbol(chords[0]!, "simple")).toBe("C");
-    expect(displaySymbol(chords[0]!, "medium")).toBe(desktop.displaySymbol(chords[0]!, "medium"));
-    expect(displaySymbol({ symbol: "Cmaj7" }, "simple")).toBe("Cmaj7");
+    expect(displaySymbol(chords[0]!)).toBe("C");
+    expect(displaySymbol(chords[1]!)).toBe("G");
+    expect(displaySymbol(chords[0]!)).toBe(desktop.displaySymbol(chords[0]!));
+    expect(displaySymbol({ symbol: "Cmaj7/E" })).toBe("C");
 
     let index = 0;
     let desktopIndex = 0;

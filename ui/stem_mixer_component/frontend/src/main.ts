@@ -55,21 +55,18 @@ import {
   outputLatencyMs,
   scrollLeftToCenter,
   CAPO_PRESETS,
-  chordDifficulty,
   formatBassTab,
   listenCents,
   replaceChordSymbol,
   replaceLyricLine,
   replaceMeasureText,
   replaceSectionLabel,
-  spellChordSymbol,
   clampLoop,
   formatChordSymbol,
   lyricLineAt,
   measureAt,
   sectionAt,
   type AnalysisData,
-  type ChordLevel,
   type Section,
   type TabData,
 } from "./analysis";
@@ -78,7 +75,6 @@ let practiceSheetOpen: boolean | null = null;
 const chordSymbolEdits = new Map<number, string>();
 let chordEditKey = "";
 let capoFret = 0;
-let chordLevel: ChordLevel = "medium";
 let chordFollowIndex = 0;
 let chordActiveChip: HTMLElement | null = null;
 let chordUserScrollAt = 0;
@@ -2721,8 +2717,8 @@ function sidebarChordPayload(t: number): { symbol: string; diagram: string } {
     chord = best ?? chords[0];
   }
   if (!chord) return { symbol: "—", diagram: "" };
-  const symbol = formatChordSymbol(chord.symbol);
-  const raw = chordDiagramSvg(capoDiagramSymbol(chord.symbol, capoFret)).trim();
+  const symbol = formatChordSymbol(displaySymbol(chord));
+  const raw = chordDiagramSvg(capoDiagramSymbol(displaySymbol(chord), capoFret)).trim();
   const diagram = raw.startsWith("<svg") && raw.endsWith("</svg>") ? raw : "";
   return { symbol, diagram };
 }
@@ -2830,7 +2826,6 @@ function chordDiagramSvg(symbol: string): string {
   return parts.join("");
 }
 
-let spelling: "sharp" | "flat" = "sharp";
 let listenA432 = false;
 
 function renderPracticePanel(): void {
@@ -2876,16 +2871,12 @@ function renderPracticePanel(): void {
     } else {
       const chips = chords
         .map((chord, index) => {
-          const symbol = spellChordSymbol(displaySymbol(chord, chordLevel), spelling);
-          const previous =
-            index > 0
-              ? spellChordSymbol(displaySymbol(chords[index - 1]!, chordLevel), spelling)
-              : "";
+          const symbol = displaySymbol(chord);
+          const previous = index > 0 ? displaySymbol(chords[index - 1]!) : "";
           const repeat = index > 0 && symbol === previous ? " is-repeat" : "";
           return (
             `<div class="chord-chip${repeat}" data-chord-index="${index}">` +
             `<input class="chord-chip-symbol" data-chord-index="${index}" value="${escapeHtml(symbol)}" aria-label="Chord symbol" />` +
-            `<span class="chord-difficulty">${escapeHtml(chordDifficulty(chord.symbol))}</span>` +
             `<button type="button" class="chord-chip-time" data-seek="${chord.start}">${readableTime(chord.start)}</button>` +
             `</div>`
           );
@@ -2907,14 +2898,6 @@ function renderPracticePanel(): void {
             `<button type="button" class="ghost practice-small" data-capo-preset="${preset.fret}">${preset.label}</button>`
         ).join("") +
         `</div>` +
-        `<button type="button" class="ghost practice-small" id="btn-spelling" aria-pressed="${spelling === "flat" ? "true" : "false"}">` +
-        `${spelling === "flat" ? "Flats" : "Sharps"}</button>` +
-        `<label class="capo-label"><span class="visually-hidden">Chord detail</span>` +
-        `<select id="chord-level" aria-label="Chord detail">` +
-        `<option value="simple"${chordLevel === "simple" ? " selected" : ""}>Simple</option>` +
-        `<option value="medium"${chordLevel === "medium" ? " selected" : ""}>Medium</option>` +
-        `<option value="chart"${chordLevel === "chart" ? " selected" : ""}>Chart</option>` +
-        `</select></label>` +
         `<button type="button" class="ghost practice-small" id="chord-follow">Follow</button>` +
         "</div>" +
         "</div>" +
@@ -3040,17 +3023,6 @@ function renderPracticePanel(): void {
       postSidebarChord(engine.currentTime());
     };
   });
-  const levelSelect = document.getElementById("chord-level") as HTMLSelectElement | null;
-  if (levelSelect) {
-    levelSelect.value = chordLevel;
-    levelSelect.onchange = () => {
-      const next = levelSelect.value;
-      chordLevel = next === "simple" || next === "medium" ? next : "chart";
-      chordActiveChip = null;
-      renderPracticePanel();
-      updatePracticePanelAt(engine.currentTime(), true);
-    };
-  }
   const followButton = document.getElementById("chord-follow");
   if (followButton) {
     followButton.onclick = () => {
@@ -3064,13 +3036,6 @@ function renderPracticePanel(): void {
       if (chordProgrammaticScroll) return;
       chordUserScrollAt = performance.now();
     });
-  }
-  const spellingButton = document.getElementById("btn-spelling");
-  if (spellingButton) {
-    spellingButton.onclick = () => {
-      spelling = spelling === "flat" ? "sharp" : "flat";
-      renderPracticePanel();
-    };
   }
   body.querySelectorAll<HTMLInputElement>("input.section-label").forEach((input) => {
     input.onkeydown = (event) => event.stopPropagation();
@@ -3249,13 +3214,13 @@ function updatePracticePanelAt(t: number, force = false): void {
 
   if (practicePanelTab === "chords") {
     const chord = chordAt(analysisData?.chords, chartTimeSeconds(t, engine.chartLatencyMs()));
-    const symbol = chord ? formatChordSymbol(displaySymbol(chord, chordLevel)) : "—";
+    const symbol = chord ? formatChordSymbol(displaySymbol(chord)) : "—";
     const symbolEl = document.getElementById("chord-now-symbol");
     const diagramEl = document.getElementById("chord-now-diagram");
     const sectionEl = document.getElementById("chord-now-section");
     if (symbolEl) symbolEl.textContent = symbol;
     if (diagramEl && chord) {
-      const shapeSymbol = capoDiagramSymbol(displaySymbol(chord, chordLevel), capoFret);
+      const shapeSymbol = capoDiagramSymbol(displaySymbol(chord), capoFret);
       const drawn = `${shapeSymbol}|${capoFret}`;
       if (diagramEl.dataset.symbol !== drawn) {
         diagramEl.dataset.symbol = drawn;
@@ -4777,6 +4742,16 @@ function softUpdateStemDownloads(stems: StemInfo[]): void {
   }
 }
 
+// Host passes get_iframe_theme_vars() as themeVars. Unapplied, iframe-theme.css
+// fell back to the old Forest greens on the navy page (I-633).
+function applyThemeVars(vars: unknown): void {
+  if (!vars || typeof vars !== "object") return;
+  const root = document.documentElement;
+  for (const [name, value] of Object.entries(vars as Record<string, unknown>)) {
+    if (name.startsWith("--") && typeof value === "string") root.style.setProperty(name, value);
+  }
+}
+
 async function onRender(event: Event): Promise<void> {
   const data = (event as CustomEvent<RenderData>).detail;
   const args = data.args as {
@@ -4800,8 +4775,10 @@ async function onRender(event: Event): Promise<void> {
     initialSemitones?: number;
     stemTrims?: Record<string, { start?: number; end?: number }> | null;
     seekSec?: number | null;
+    themeVars?: unknown;
   };
 
+  applyThemeVars(args.themeVars);
   const stems = args.stems ?? [];
   const nextMetro = parseMetronomeArg(args.metronome);
   const key = stemKey(stems, nextMetro);

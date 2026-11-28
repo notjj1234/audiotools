@@ -1,0 +1,158 @@
+{
+  "version": 5,
+  "name": "jj_audio_website",
+  "request": "<context>\nYou already have access to my project. Read it before doing anything else. The app is heavily inspired by Moises AI (stem separation / practice tool for musicians). Moises is installed on my computer if you can access it, and you may also research Moises and similar tools online (e.g. LALAL.AI, MVSep, Ultimate Vocal Remover, Fadr, RipX, Songsterr for tab-related UX).\n\nI am a musician and developer. I want an honest review of the app, then targeted improvements, especially a new feature that separates LEAD guitar from RHYTHM guitar.\n</context>\n\n<mode>\nThis prompt is used in two tools. Detect which one you are running in:\n- Reverse Engineer Anything → do PHASE 1 ONLY, deliver the report, then STOP.\n- Craft Anything → do PHASE 1, present the plan, WAIT for my approval, then do PHASE 2.\nIf you cannot tell, do Phase 1 and stop.\n</mode>\n\n<hard_constraints>\n- NEVER change the existing color palette. Keep every existing color value. You MAY improve layout, spacing, typography hierarchy, component states, contrast handling, animations and usability, but only with colors already in the palette (tints/shades of existing colors are OK if you list them).\n- Only make changes I approve from the plan. Do not refactor unrelated code or add features beyond the plan.\n- Stop and ask before: adding any dependency or ML model download, deleting files, changing data/storage schemas, or changing the existing processing pipeline's default behavior.\n- Do not fabricate facts about Moises or competitors. Mark anything you couldn't verify as [unverified] and link sources for claims you found online.\n</hard_constraints>\n\n<phase_1_reverse_engineer>\n1. Map the current app: features, user flow, architecture, audio/stem pipeline (which separation models and at what settings), UI screens, and the palette (list every color token/hex in use).\n2. Teardown of Moises (and 2–3 similar tools): features, UX patterns, stem options, mixer/player controls, practice tools (tempo, pitch, loop, metronome, chords), and specifically how they handle lead vs rhythm guitar separation.\n3. Gap analysis of MY app, in four sections:\n   - Functionality: missing or weak features vs competitors\n   - Visuals/UI: what to improve without touching the palette\n   - Drawbacks: performance, separation quality, error handling, edge cases, UX friction\n   - Fallbacks: what happens when processing fails, a model is unavailable, input is unusual (mono files, live recordings, no guitar present, very long files). Note where there is no fallback.\n4. Lead vs rhythm guitar research (see dedicated section below).\n5. A prioritized improvement plan: each item has impact (high/med/low), effort (S/M/L), files affected, and any new dependency it needs.\n\nDeliver Phase 1 as a single markdown report saved in the project root as `REVIEW_AND_PLAN.md`, plus a 5-line summary in chat.\n</phase_1_reverse_engineer>\n\n<lead_vs_rhythm_feature>\nGoal: after the guitar stem is isolated, split it into \"Lead Guitar\" and \"Rhythm Guitar\" stems that the user can solo, mute and adjust volume on, like the other stems.\n\nMy starting intuition as a player: lead usually has more gain, a sharper and louder tone, while rhythm is softer but punchier. Treat this as a hypothesis, not a rule, because rhythm in rock and metal is often high-gain too. Evaluate more reliable signals and recommend a combination, for example:\n- Polyphony: rhythm plays chords and power chords; lead is mostly single-note lines\n- Register: lead tends to sit higher on the neck / higher pitch range\n- Stereo placement: rhythm is often double-tracked and panned hard L/R; lead is often centered or panned differently (mid/side analysis)\n- Note articulation: lead has bends, vibrato, long sustain; rhythm has repetitive strummed/palm-muted onsets\n- Spectral/tonal features: brightness, spectral centroid, distortion/saturation level, loudness relative to the mix\n- Dedicated pretrained models: research whether existing lead/rhythm guitar separation models exist (e.g. on MVSep or RoFormer-based model hubs), plus their license, size and quality\n\nCompare at least three approaches: (a) a dedicated pretrained model, (b) a feature-based heuristic split, (c) a hybrid such as model-first with heuristic fallback. For each one, give expected quality, runtime cost, dependencies, and what happens on songs with only one guitar. Recommend one. The design MUST include a fallback: if confidence is low or there's only one guitar part, keep a single \"Guitar\" stem and tell the user why.\n</lead_vs_rhythm_feature>\n\n<phase_2_craft>\nOnly after I approve the plan (I may approve a subset):\n- Implement approved items in priority order, one at a time.\n- After each item, output: ✅ [what was completed] | files changed | how to test it.\n- For lead/rhythm: build it behind a toggle/option so the existing separation flow is unchanged by default. Include a test using at least one example track and describe how you judged separation quality.\n- For UI changes: confirm in your summary that no palette color was changed or added outside approved tints/shades.\n</phase_2_craft>\n\n<stop_conditions>\n- Stop after Phase 1 and wait (both tools).\n- Stop if an approved item needs a dependency, model download or schema change you didn't list in the plan.\n- Stop if the same error happens twice in a row. Report what you tried instead of looping.\n- Done when every approved item is implemented, the app runs without errors, and the lead/rhythm toggle works with its fallback.\n</stop_conditions>",
+  "target": {
+    "kind": "none"
+  },
+  "stack": "Builder's choice",
+  "status": "ready",
+  "note": "Ready: all 2 checks pass. 2 questions about the original are still open.",
+  "created_ms": 1795482284940,
+  "updated_ms": 1795647933336,
+  "checks": [
+    {
+      "round": 1,
+      "check": "build",
+      "passed": true,
+      "similarity": null,
+      "note": "`python3 -m compileall -q -f -x [\\\\/](\\.?venv|node_modules|\\.git)[\\\\/] .` passed.",
+      "artifacts": [],
+      "at_ms": 1795482720526
+    },
+    {
+      "round": 1,
+      "check": "own-tests",
+      "passed": true,
+      "similarity": null,
+      "note": "No tests ran: No module named pytest.",
+      "artifacts": [],
+      "at_ms": 1795482720581
+    },
+    {
+      "round": 2,
+      "check": "build",
+      "passed": true,
+      "similarity": null,
+      "note": "`python3 -m compileall -q -f -x [\\\\/](\\.?venv|node_modules|\\.git)[\\\\/] .` passed.",
+      "artifacts": [],
+      "at_ms": 1795483088100
+    },
+    {
+      "round": 2,
+      "check": "own-tests",
+      "passed": true,
+      "similarity": null,
+      "note": "No tests ran: No module named pytest.",
+      "artifacts": [],
+      "at_ms": 1795483088204
+    },
+    {
+      "round": 3,
+      "check": "build",
+      "passed": true,
+      "similarity": null,
+      "note": "`python3 -m compileall -q -f -x [\\\\/](\\.?venv|node_modules|\\.git)[\\\\/] .` passed.",
+      "artifacts": [],
+      "at_ms": 1795493904992
+    },
+    {
+      "round": 3,
+      "check": "own-tests",
+      "passed": true,
+      "similarity": null,
+      "note": "No tests ran: No module named pytest.",
+      "artifacts": [],
+      "at_ms": 1795493905051
+    },
+    {
+      "round": 4,
+      "check": "build",
+      "passed": true,
+      "similarity": null,
+      "note": "`python3 -m compileall -q -f -x [\\\\/](\\.?venv|node_modules|\\.git)[\\\\/] .` passed.",
+      "artifacts": [],
+      "at_ms": 1795495226943
+    },
+    {
+      "round": 4,
+      "check": "own-tests",
+      "passed": true,
+      "similarity": null,
+      "note": "No tests ran: No module named pytest.",
+      "artifacts": [],
+      "at_ms": 1795495226999
+    },
+    {
+      "round": 5,
+      "check": "build",
+      "passed": true,
+      "similarity": null,
+      "note": "`python3 -m compileall -q -f -x [\\\\/](\\.?venv|node_modules|\\.git)[\\\\/] .` passed.",
+      "artifacts": [],
+      "at_ms": 1795647916911
+    },
+    {
+      "round": 5,
+      "check": "own-tests",
+      "passed": true,
+      "similarity": null,
+      "note": "No tests ran: No module named pytest.",
+      "artifacts": [],
+      "at_ms": 1795647916971
+    }
+  ],
+  "agent_session": "8df58d47-87a4-4ba1-9b6a-1470150ed725",
+  "agent_session_by": "claude-code",
+  "agent_session_deep": true,
+  "capture_deep": true,
+  "allowed_actions": [
+    "tool:build_command_run"
+  ],
+  "last_reply": "The new note count matches the old one exactly, and the full suite passes (1,257 tests). Adding the speed numbers to the evaluation notes, then running the final check.The lead/rhythm split now runs about twice as fast: a 4-minute test song takes about 13 seconds instead of 25, with the same result. I checked the rest of the app's code for real bugs and found none, and all 1,257 tests and the final check pass. Still open: the split hasn't been tried on real songs, and the website has no Swap button.",
+  "asset_budget_usd": 5.0,
+  "generate_assets": false,
+  "app_in_root": true,
+  "start_files": [
+    ".DS_Store",
+    ".agents",
+    ".cursor",
+    ".env.example",
+    ".env.lite.example",
+    ".git",
+    ".gitattributes",
+    ".github",
+    ".gitignore",
+    ".opencode",
+    ".pr_agent.toml",
+    ".pytest_cache",
+    ".python-version",
+    ".ruff_cache",
+    ".streamlit",
+    ".superpowers",
+    ".venv",
+    ".venv-desktop",
+    ".venv311",
+    ".venv312",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "Caddyfile",
+    "DEPLOY.md",
+    "DESKTOP.md",
+    "Dockerfile",
+    "Dockerfile.web",
+    "LICENSE",
+    "Makefile",
+    "PLANNING.md",
+    "PROJECT_TREE.md",
+    "README.md",
+    "SECURITY.md",
+    "audio_to_tab_pdf.egg-info",
+    "backend",
+    "bench",
+    "build",
+    "data",
+    "dist",
+    "docker-compose.lite.yml"
+  ]
+}

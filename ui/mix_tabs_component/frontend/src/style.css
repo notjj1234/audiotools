@@ -159,6 +159,11 @@ body {
 }
 
 .mix-tab {
+  /* Shrink before scrolling (Chrome-style): with fixed-width tabs, three open
+     songs already pushed + under the right-edge fade. Scrolling only starts
+     once every tab is at its minimum. */
+  flex: 0 1 auto;
+  min-width: 112px;
   max-width: 180px;
   /* Tighter block padding so the 28px close target still fits the 48px strip. */
   padding-top: 0.3rem;

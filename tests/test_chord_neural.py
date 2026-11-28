@@ -38,10 +38,12 @@ def test_mir_eval_label_maps_to_product_symbols():
     assert _mir_eval_to_symbol("G#:min") == "G#m"
     assert _mir_eval_to_symbol("N") == "N"
     assert _mir_eval_to_symbol("X") == "N"
-    assert _mir_eval_to_symbol("C:hdim7") == "Cm7b5"
-    assert _mir_eval_to_symbol("C:minmaj7") == "CmMaj7"
-    assert _mir_eval_to_symbol("C:maj6") == "C6"
-    assert _mir_eval_to_symbol("D:min6") == "Dm6"
+    assert _mir_eval_to_symbol("C:hdim7") == "Cm"
+    assert _mir_eval_to_symbol("C:minmaj7") == "Cm"
+    assert _mir_eval_to_symbol("C:maj6") == "C"
+    assert _mir_eval_to_symbol("D:min6") == "Dm"
+    assert _mir_eval_to_symbol("Bb:min7") == "A#m"
+    assert _mir_eval_to_symbol("C:maj/3") == "C"
 
 
 def test_chord_model_unavailable_without_weights(tmp_path, monkeypatch):

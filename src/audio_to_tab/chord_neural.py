@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from audio_to_tab.analysis import ChordEvent
-from audio_to_tab.chord_symbols import parse
+from audio_to_tab.chord_symbols import basic_from_text
 from audio_to_tab.chords import (
     _OFF_DOWNBEAT_PENALTY,
     _ON_DOWNBEAT_BONUS,
@@ -31,7 +31,6 @@ from audio_to_tab.chords import (
     _decorate,
     _is_downbeat,
     _merge_events,
-    _slash_bass,
     _viterbi,
     _window_confidence,
 )
@@ -164,35 +163,14 @@ def _notify(progress: Callable[[str], None] | None, message: str) -> None:
 
 
 def _mir_eval_to_symbol(label: str) -> str:
+    """mir_eval label (``C:min``, ``F#``, ``N``) to the product name (``Cm``, ``F#``, ``N``)."""
     text = (label or "").strip()
     if not text or text.upper() in {"N", "X"}:
         return "N"
-    if text.endswith(":min"):
-        root = text[: -len(":min")]
-        return f"{root}m"
-    if ":" in text:
-        root, quality = text.split(":", 1)
-        mapping = {
-            "maj": "",
-            "min": "m",
-            "maj7": "maj7",
-            "min7": "m7",
-            "minmaj7": "mMaj7",
-            "7": "7",
-            "dim": "dim",
-            "aug": "aug",
-            "sus2": "sus2",
-            "sus4": "sus4",
-            "dim7": "dim7",
-            "hdim7": "m7b5",
-            "min6": "m6",
-            "maj6": "6",
-        }
-        suffix = mapping.get(quality, "")
-        if quality in mapping:
-            return f"{root}{suffix}"
-    chord = parse(text)
-    return text if chord is None else f"{chord.root}{'' if chord.quality == 'maj' else ('m' if chord.quality == 'min' else chord.quality)}"
+    root, _sep, quality = text.partition(":")
+    quality = quality.split("/", 1)[0]
+    minor = quality.startswith("min") or quality in {"dim", "dim7", "hdim7"}
+    return basic_from_text(f"{root}m" if minor else root)
 
 
 def _window_confidence_from_scores(row: np.ndarray) -> float:
@@ -436,7 +414,6 @@ def _indices_to_events(
     *,
     windows: Sequence[tuple[float, float]],
     confidences: Sequence[float] | None = None,
-    bass_vectors: Sequence[np.ndarray] | None = None,
     # Backward-compatible kwargs used by older call sites / tests.
     time_unit: float | None = None,
     duration: float | None = None,
@@ -469,9 +446,6 @@ def _indices_to_events(
         symbol = _mir_eval_to_symbol(
             _IDX2CHORD[label_index] if 0 <= label_index < len(_IDX2CHORD) else "N"
         )
-        if bass_vectors is not None and start_index < len(bass_vectors) and symbol != "N":
-            # Slash from the first window of the run (stable bass peak).
-            symbol = _slash_bass(symbol, np.asarray(bass_vectors[start_index], dtype=np.float64))
         if confidences is not None:
             run_conf = [float(confidences[i]) for i in range(start_index, end_index) if i < len(confidences)]
             confidence = float(min(run_conf)) if run_conf else 0.0
@@ -500,40 +474,6 @@ def _indices_to_events(
     return _merge_events(events)
 
 
-def _bass_vectors_for_windows(
-    audio_path: Path,
-    windows: Sequence[tuple[float, float]],
-    *,
-    bass_path: Path | None,
-) -> list[np.ndarray] | None:
-    if bass_path is None or not Path(bass_path).is_file() or not windows:
-        return None
-    try:
-        import librosa
-
-        from audio_to_tab.chords import _BINS_PER_OCTAVE, _bass_chroma, estimate_tuning_semitones
-        from audio_to_tab.chords import _HOP as _CHROMA_HOP
-    except Exception:
-        return None
-    try:
-        y, sr = librosa.load(str(audio_path), sr=_SONG_HZ, mono=True)
-        if y.size < int(sr * 0.2):
-            return None
-        tuning = estimate_tuning_semitones(y, int(sr))
-        tuning_bins = tuning * (_BINS_PER_OCTAVE / 12.0)
-        chroma = _bass_chroma(y, int(sr), bass_path=Path(bass_path), tuning_bins=tuning_bins)
-    except Exception:
-        logger.debug("BTC slash bass chroma failed", exc_info=True)
-        return None
-    vectors: list[np.ndarray] = []
-    n_frames = chroma.shape[1]
-    for start, end in windows:
-        first = max(0, min(n_frames - 1, int(librosa.time_to_frames(start, sr=sr, hop_length=_CHROMA_HOP))))
-        last = max(first + 1, min(n_frames, int(librosa.time_to_frames(end, sr=sr, hop_length=_CHROMA_HOP)) + 1))
-        vectors.append(chroma[:, first:last].mean(axis=1))
-    return vectors
-
-
 def detect_chords_btc(
     audio_path: Path,
     *,
@@ -542,7 +482,6 @@ def detect_chords_btc(
     beats: Sequence[float] = (),
     downbeats: Sequence[float] | None = None,
     beats_per_measure: int = 4,
-    bass_path: Path | None = None,
 ) -> list[ChordEvent] | None:
     """Run BTC maj/min recognition. Returns ``None`` when unavailable so callers fall back."""
     path = Path(audio_path)
@@ -578,12 +517,10 @@ def detect_chords_btc(
             meter=beats_per_measure,
         )
         confidences = [_window_confidence_from_scores(row) for row in window_scores]
-        bass_vectors = _bass_vectors_for_windows(path, windows, bass_path=bass_path)
         events = _indices_to_events(
             path_indices,
             windows=windows,
             confidences=confidences,
-            bass_vectors=bass_vectors,
         )
         _notify(progress, f"chords: BTC {len(events)} segments")
         return events

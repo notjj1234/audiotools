@@ -11,6 +11,7 @@ type Args = {
   minLengthSec?: number;
   durationSec?: number | null;
   maxHintSec?: number | null;
+  revision?: number;
 };
 
 type PlayResume = {
@@ -46,6 +47,28 @@ function applyTheme(theme?: Theme): void {
     root.style.setProperty("--rp-wave", theme.primaryColor);
     root.style.setProperty("--rp-progress", theme.primaryColor);
   }
+}
+
+// Host passes get_iframe_theme_vars() as themeVars. Unapplied, iframe-theme.css
+// fell back to the old Forest greens on the navy page (I-633).
+function applyThemeVars(vars: unknown): void {
+  if (!vars || typeof vars !== "object") return;
+  const root = document.documentElement;
+  for (const [name, value] of Object.entries(vars as Record<string, unknown>)) {
+    if (name.startsWith("--") && typeof value === "string") root.style.setProperty(name, value);
+  }
+}
+
+// The selected span reads as a lifted panel in the theme's highlight colour.
+// It was a hard-coded Forest teal (I-633); an accent tint over navy went brown.
+// The region paints over the amber bars, so keep it light: at 0.55 it mixed
+// the bars to brown in the desktop window.
+function selectionTint(): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--bg-highlight").trim();
+  const hex = /^#([0-9a-f]{6})$/i.exec(raw);
+  if (!hex) return "rgba(53, 85, 124, 0.18)";
+  const n = parseInt(hex[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.18)`;
 }
 
 function scheduleFrameHeight(): void {
@@ -118,6 +141,9 @@ let lastSourceUrl = "";
 let suppressingReport = false;
 let userPaused = false;
 let lastReported = { startSec: -1, endSec: -1 };
+// Host bumps this when it moves the region itself (Safer: first 90 s). Echoed
+// back so the host can ignore a stale drag report without remounting (I-631).
+let revision = 0;
 let reportTimer: ReturnType<typeof setTimeout> | null = null;
 let loadGeneration = 0;
 let playBtn: HTMLButtonElement | null = null;
@@ -187,7 +213,7 @@ function flushReportRegion(start: number, end: number): void {
   }
   lastReported = { startSec, endSec };
   updateMeta(startSec, endSec);
-  Streamlit.setComponentValue({ startSec, endSec });
+  Streamlit.setComponentValue({ startSec, endSec, revision });
 }
 
 /** Debounce setComponentValue so drag-end does not remount mid-blob-fetch. */
@@ -236,7 +262,7 @@ function syncRegion(start: number, end: number, minLength: number): void {
         id: "selection",
         start: s,
         end: e,
-        color: "rgba(42, 111, 106, 0.28)",
+        color: selectionTint(),
         drag: true,
         resize: true,
         minLength,
@@ -369,9 +395,15 @@ async function loadWave(
 
 async function onRender(event: Event): Promise<void> {
   const data = (event as CustomEvent<RenderData>).detail;
-  const args = (data.args || {}) as Args;
+  const args = (data.args || {}) as Args & { themeVars?: unknown };
   applyTheme(data.theme);
+  applyThemeVars(args.themeVars);
   ensureDom();
+  const nextRevision = Number(args.revision) || 0;
+  if (nextRevision !== revision) {
+    revision = nextRevision;
+    lastReported = { startSec: -1, endSec: -1 };
+  }
 
   const url = String(args.audioUrl || "");
   const minLength = Math.max(0.5, Number(args.minLengthSec) || 5);

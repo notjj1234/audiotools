@@ -1,0 +1,207 @@
+{
+  "id": "ev_834095bd34ef47e2b2296cdf9a2e06ca97120954ebdcdf07ba8525a0c49bc721",
+  "subject": {
+    "kind": "asar",
+    "sha256": "6a42619e39f7ca3c98085e2c2cbcd8fa90397ace6dd133c40c551eee070ef05a",
+    "name": "app.asar"
+  },
+  "operation": "core_evidence_browse",
+  "params": {
+    "show": {
+      "kind": "rows",
+      "limit": 20,
+      "list": "endpoints"
+    },
+    "source": {
+      "evidence_id": "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4",
+      "kind": "saved"
+    }
+  },
+  "result": {
+    "coverage": {
+      "at_end": true,
+      "examined": 15,
+      "next_offset": null,
+      "status": "page",
+      "total": 15
+    },
+    "from_evidence": "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4",
+    "from_tool": "js_app_map",
+    "shown": {
+      "items": [
+        {
+          "api": "fetch",
+          "function": "github",
+          "line": 63,
+          "literal": false,
+          "method": null,
+          "module": "native/capture/fetch-prebuilds.mjs",
+          "role": "unknown",
+          "url": "{url}"
+        },
+        {
+          "api": "literal",
+          "function": null,
+          "line": 1,
+          "literal": true,
+          "method": null,
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "https://studio-stage.moises.ai"
+        },
+        {
+          "api": "literal",
+          "function": null,
+          "line": 1,
+          "literal": true,
+          "method": null,
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "https://studio.moises.ai"
+        },
+        {
+          "api": "literal",
+          "function": null,
+          "line": 24,
+          "literal": true,
+          "method": null,
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "https://plugins.moises.ai"
+        },
+        {
+          "api": "axios",
+          "function": "Bn",
+          "line": 24,
+          "literal": false,
+          "method": "GET",
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "{e}"
+        },
+        {
+          "api": "axios",
+          "function": "Hn",
+          "line": 24,
+          "literal": false,
+          "method": "GET",
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "{e}"
+        },
+        {
+          "api": "axios",
+          "function": "Gn",
+          "line": 24,
+          "literal": false,
+          "method": "GET",
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "{…}{e}"
+        },
+        {
+          "api": "literal",
+          "function": null,
+          "line": 125,
+          "literal": true,
+          "method": null,
+          "module": "out/main/index.js",
+          "role": "main",
+          "url": "https://c310e58db1db4769812adbe737827f6a@o418792.ingest.sentry.io/4503899367997440"
+        },
+        {
+          "api": "literal",
+          "function": "i",
+          "line": 1,
+          "literal": true,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "https://react.dev/errors/"
+        },
+        {
+          "api": "literal",
+          "function": "P5",
+          "line": 8,
+          "literal": true,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "http://www.w3.org/2000/svg"
+        },
+        {
+          "api": "literal",
+          "function": "P5",
+          "line": 8,
+          "literal": true,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "http://www.w3.org/1998/Math/MathML"
+        },
+        {
+          "api": "literal",
+          "function": "Wa",
+          "line": 9,
+          "literal": true,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "http://www.w3.org/1999/xlink"
+        },
+        {
+          "api": "literal",
+          "function": "Wa",
+          "line": 9,
+          "literal": true,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "http://www.w3.org/XML/1998/namespace"
+        },
+        {
+          "api": "fetch",
+          "function": "<anonymous@69>",
+          "line": 69,
+          "literal": false,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "{r}"
+        },
+        {
+          "api": "fetch",
+          "function": "Lg.src",
+          "line": 142,
+          "literal": false,
+          "method": null,
+          "module": "out/renderer/assets/index-C76vPLoN.js",
+          "role": "renderer",
+          "url": "{i}"
+        }
+      ],
+      "list": "endpoints",
+      "offset": 0,
+      "total": 15
+    }
+  },
+  "summary": "Part of js_app_map evidence (page).",
+  "confidence": "derived",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [],
+  "coverage": {
+    "status": "complete",
+    "examined": 15,
+    "total": 15
+  },
+  "locations": [],
+  "links": [
+    "ev_0fc587ce791ce2292415bbc641e3145f0ab47e675a1917a91775985489786bd4"
+  ]
+}

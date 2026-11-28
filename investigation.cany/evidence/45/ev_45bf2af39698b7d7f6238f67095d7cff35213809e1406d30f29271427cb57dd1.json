@@ -1,0 +1,49 @@
+{
+  "id": "ev_45bf2af39698b7d7f6238f67095d7cff35213809e1406d30f29271427cb57dd1",
+  "subject": {
+    "kind": "asar",
+    "sha256": "6a42619e39f7ca3c98085e2c2cbcd8fa90397ace6dd133c40c551eee070ef05a",
+    "name": "app.asar"
+  },
+  "operation": "core_archive_extract",
+  "params": {
+    "max_bytes": 4294967296,
+    "max_files": 100000,
+    "path": "/Applications/Moises.app/Contents/Resources/app.asar"
+  },
+  "result": {
+    "bytes_written": 64637261,
+    "contradictions": [],
+    "files_written": 6710,
+    "output_directory": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/craft-anything-extract-c0fd1ace79e698b2",
+    "skipped": []
+  },
+  "summary": "Extracted 6710 files (64637261 bytes) from app.asar into /var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/craft-anything-extract-c0fd1ace79e698b2.",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "nested_not_extracted",
+      "message": "Archives inside the archive are written as files, not unpacked; run core_archive_extract on them."
+    }
+  ],
+  "coverage": {
+    "status": "complete",
+    "examined": 6710,
+    "total": 6710
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/craft-anything-extract-c0fd1ace79e698b2",
+      "label": "output folder"
+    }
+  ],
+  "links": []
+}

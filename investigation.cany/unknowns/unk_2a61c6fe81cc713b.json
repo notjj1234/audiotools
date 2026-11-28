@@ -1,0 +1,15 @@
+{
+  "id": "unk_2a61c6fe81cc713b",
+  "revision": 2,
+  "question": "Lead/rhythm split quality on real songs (only synthetic clips exist locally).",
+  "severity": "high",
+  "domain": "quality",
+  "status": "open",
+  "probes": [
+    "Person supplies 2-3 rights-cleared multitracks",
+    "Person listens on songs they own after LR-1/LR-2"
+  ],
+  "evidence_for": [],
+  "evidence_against": [],
+  "resolution": "2026-11-24: v2 measured on synthetic songs with known parts only (eval/lead_rhythm/README.md v2 table: temporal 26-34 dB, hard-pan 30/17 dB, doubled-rhythm+centered lead 7/3.5 dB, single-role refused). Real-song quality still unverified; needs the person's rights-cleared multitracks or listening."
+}

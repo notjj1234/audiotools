@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -14,10 +15,27 @@ from ui.media import (
     ensure_mixer_audio_paths,
     ensure_region_preview_wav,
     media_mimetype_for_path,
+    media_stamps,
     region_preview_cache_key,
     register_mixer_media,
     stem_media_urls,
+    stems_changed_since,
 )
+
+
+def test_stems_changed_since_flags_only_rewritten_files(tmp_path: Path) -> None:
+    vocals = tmp_path / "vocals.wav"
+    click = tmp_path / "metronome.wav"
+    vocals.write_bytes(b"v")
+    click.write_bytes(b"c")
+    stems = {"vocals": vocals, "metronome": click}
+    stamps = media_stamps(stems)
+    assert stems_changed_since(stems, stamps) == {}
+    stamp = click.stat().st_mtime_ns + 1_000_000
+    os.utime(click, ns=(stamp, stamp))
+    assert stems_changed_since(stems, stamps) == {"metronome": click}
+    assert stems_changed_since(stems, {}) == stems
+    assert media_stamps({"gone": tmp_path / "missing.wav"}) == {"gone": -1}
 
 
 def _write_tone(path: Path, seconds: float, sr: int = 44100) -> None:

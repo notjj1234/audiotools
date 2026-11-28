@@ -842,6 +842,33 @@ def apply_emit_stems(
     return artifacts
 
 
+# id(IsolateConfig) → why the requested guitar-ft weights were not used in this
+# run (filled by _run_demucs_model, consumed once by separate_stems).
+_GUITAR_FT_FALLBACKS: dict[int, str] = {}
+
+
+def write_guitar_weights_diagnostics(out_dir: Path, *, requested: str, reason: str) -> Path:
+    """Record that stock htdemucs_6s replaced the requested guitar weights."""
+    path = Path(out_dir) / "guitar_weights_diagnostics.json"
+    path.write_text(
+        json.dumps(
+            {
+                "requested": requested,
+                "used": "htdemucs_6s",
+                "fallback": True,
+                "reason": reason,
+                "user_message": (
+                    "The guitar-focused weights couldn't be used, so the standard "
+                    "6-stem model separated this song instead."
+                ),
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 @dataclass
 class IsolateConfig:
     model: str = "htdemucs_6s"
@@ -2177,6 +2204,8 @@ def _run_demucs_model(
             return
         except Exception as exc:
             logger.warning("guitar-ft separation failed; falling back to stock 6s: %s", exc)
+            # Surfaced to the person (guitar_weights_diagnostics.json), not only logged.
+            _GUITAR_FT_FALLBACKS[id(cfg)] = f"{type(exc).__name__}: {exc}"
 
     shifts = resolve_demucs_shifts(cfg.quality, cfg.demucs_shifts)
     overlap = resolve_demucs_overlap(cfg.quality, cfg.demucs_overlap)
@@ -2644,14 +2673,29 @@ def separate_stems(
         logger.debug("guitar stem quality: %s", quality_diag.reason)
         progress("bass_bleed", "Separating tracks")
 
+    ft_fallback = _GUITAR_FT_FALLBACKS.pop(id(cfg), None)
+    if ft_fallback:
+        artifacts["guitar_weights_diagnostics"] = write_guitar_weights_diagnostics(
+            out_dir,
+            requested=str(cfg.guitar_checkpoint or GUITAR_FT_CHECKPOINT_ID),
+            reason=ft_fallback,
+        )
+
     lead_rhythm_diag = None
     # Default isolate path: one combined Guitar stem. Lead/Rhythm only when
     # explicitly opted in (CLI/eval via lead_rhythm / dual_guitar).
     run_lead_rhythm = bool(cfg.lead_rhythm or cfg.dual_guitar)
     if "guitar" not in artifacts:
         if run_lead_rhythm:
+            from audio_to_tab.lead_rhythm import split_lead_rhythm_guitar
+
             logger.debug("Lead/Rhythm skipped — no guitar stem")
             progress("guitar_split", "Separating tracks")
+            # Still write diagnostics so the mixer can say why nothing was split.
+            extra, lead_rhythm_diag = split_lead_rhythm_guitar(
+                out_dir / "guitar.wav", out_dir, use_basic_pitch=False
+            )
+            artifacts.update(extra)
     elif run_lead_rhythm:
         from audio_to_tab.lead_rhythm import split_lead_rhythm_guitar
 
@@ -2660,11 +2704,14 @@ def separate_stems(
             lead_rhythm=cfg.lead_rhythm,
         )
         progress("guitar_split", "Separating tracks")
+        vocals_wav = artifacts.get("vocals")
         extra, lead_rhythm_diag = split_lead_rhythm_guitar(
             artifacts["guitar"],
             out_dir,
             thresholds=cfg.lead_rhythm_thresholds,
             emit_mode=emit_mode,
+            # Vocal silence is a strong "solo section" cue for the temporal split.
+            vocals_path=Path(vocals_wav) if vocals_wav else None,
         )
         artifacts.update(extra)
         logger.debug("lead/rhythm: %s", lead_rhythm_diag.reason)

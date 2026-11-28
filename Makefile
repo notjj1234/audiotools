@@ -101,7 +101,7 @@ ui:
 	@test -x $(VENV_PYTHON) || (echo "Run make install (or make tester) first"; exit 1)
 	$(VENV_PYTHON) -m streamlit run ui/app.py \
 		--server.address=127.0.0.1 \
-		--server.port=8501 \
+		--server.port=8521 \
 		--server.headless=false \
 		--browser.gatherUsageStats=false
 

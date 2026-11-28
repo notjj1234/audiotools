@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 import threading
@@ -749,8 +750,9 @@ def test_closing_the_window_stops_the_server_and_clears_the_lock(tmp_path, monke
 
 def test_second_launch_focuses_instead_of_starting_another_server(tmp_path, monkeypatch):
     launcher = _load_launcher()
+    port = launcher.PORT_FALLBACKS[0]
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
-    launcher._write_lock(8501)  # a live lock: our own pid
+    launcher._write_lock(port)  # a live lock: our own pid
     monkeypatch.setattr(launcher, "_health_ok", lambda port: True)
 
     focused: list[int] = []
@@ -770,7 +772,11 @@ def test_second_launch_focuses_instead_of_starting_another_server(tmp_path, monk
     assert launcher.run_desktop_app(tmp_path) == 0
     assert focused == [os.getpid()]
     # The running instance still owns the lock.
-    assert launcher._read_lock() == {"pid": os.getpid(), "port": 8501}
+    assert launcher._read_lock() == {
+        "pid": os.getpid(),
+        "port": port,
+        "product": launcher.LOCK_PRODUCT,
+    }
 
 
 def test_second_launch_with_a_file_queues_it_and_does_not_start_a_server(tmp_path, monkeypatch):
@@ -780,7 +786,7 @@ def test_second_launch_with_a_file_queues_it_and_does_not_start_a_server(tmp_pat
     song = tmp_path / "Song.wav"
     song.write_bytes(b"audio")
     monkeypatch.setattr(launcher.sys, "argv", ["AudioTools", str(song)])
-    launcher._write_lock(8501)
+    launcher._write_lock(launcher.PORT_FALLBACKS[0])
     monkeypatch.setattr(launcher, "_health_ok", lambda port: True)
     focused: list[int] = []
     monkeypatch.setattr(
@@ -805,13 +811,14 @@ def test_second_launch_with_a_file_queues_it_and_does_not_start_a_server(tmp_pat
 def test_unfocusable_windows_instance_is_reclaimed_not_sent_to_a_browser(tmp_path, monkeypatch):
     """An orphaned server with no window gets ended so a real window can start."""
     launcher = _load_launcher()
+    port_a, port_b = launcher.PORT_FALLBACKS[0], launcher.PORT_FALLBACKS[1]
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
     monkeypatch.setattr(launcher.sys, "platform", "win32")
     monkeypatch.delenv(launcher.BROWSER_FALLBACK_ENV, raising=False)
-    launcher._write_lock(8501)
+    launcher._write_lock(port_a)
     monkeypatch.setattr(launcher, "_health_ok", lambda port: True)
     monkeypatch.setattr(launcher, "_focus_existing_instance", lambda pid: False)
-    monkeypatch.setattr(launcher, "_pick_port", lambda: 8502)
+    monkeypatch.setattr(launcher, "_pick_port", lambda: port_b)
 
     def no_browser(*args, **kwargs):
         raise AssertionError("the Windows app must never fall back to a browser")
@@ -829,14 +836,15 @@ def test_unfocusable_windows_instance_is_reclaimed_not_sent_to_a_browser(tmp_pat
 
     assert launcher.run_desktop_app(tmp_path) == 0
     assert reclaimed == [os.getpid()]
-    assert spawned == [(tmp_path, 8502)]
+    assert spawned == [(tmp_path, port_b)]
 
 
 def test_unfocusable_instance_opens_browser_only_when_opted_in(tmp_path, monkeypatch):
     launcher = _load_launcher()
+    port = launcher.PORT_FALLBACKS[0]
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
     monkeypatch.setenv(launcher.BROWSER_FALLBACK_ENV, "1")
-    launcher._write_lock(8501)
+    launcher._write_lock(port)
     monkeypatch.setattr(launcher, "_health_ok", lambda port: True)
     monkeypatch.setattr(launcher, "_focus_existing_instance", lambda pid: False)
     opened: list[str] = []
@@ -854,17 +862,22 @@ def test_unfocusable_instance_opens_browser_only_when_opted_in(tmp_path, monkeyp
     monkeypatch.setattr(launcher, "_spawn_server", unreachable)
 
     assert launcher.run_desktop_app(tmp_path) == 0
-    assert opened == ["http://127.0.0.1:8501"]
+    assert opened == [f"http://127.0.0.1:{port}"]
     assert notices and notices[0][1] is False
     assert "browser" in notices[0][0].lower()
     # Lock still owned by the original instance.
-    assert launcher._read_lock() == {"pid": os.getpid(), "port": 8501}
+    assert launcher._read_lock() == {
+        "pid": os.getpid(),
+        "port": port,
+        "product": launcher.LOCK_PRODUCT,
+    }
 
 
 def test_unfocusable_second_launch_clears_lock_when_unhealthy(tmp_path, monkeypatch):
     launcher = _load_launcher()
+    port_a, port_b = launcher.PORT_FALLBACKS[0], launcher.PORT_FALLBACKS[1]
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
-    launcher._write_lock(8501)
+    launcher._write_lock(port_a)
     # First call (inside _existing_instance): healthy so we take the existing path.
     # Later calls (after focus fail): unhealthy so we clear and restart.
     health_calls = {"n": 0}
@@ -876,7 +889,7 @@ def test_unfocusable_second_launch_clears_lock_when_unhealthy(tmp_path, monkeypa
     monkeypatch.setattr(launcher, "_health_ok", health)
     monkeypatch.setattr(launcher, "_focus_existing_instance", lambda pid: False)
     monkeypatch.setattr(launcher, "_show_dialog", lambda *a, **k: None)
-    monkeypatch.setattr(launcher, "_pick_port", lambda: 8502)
+    monkeypatch.setattr(launcher, "_pick_port", lambda: port_b)
     monkeypatch.setattr(launcher, "_reclaim_orphan", lambda pid: True)
 
     server = FakeServer()
@@ -891,13 +904,13 @@ def test_unfocusable_second_launch_clears_lock_when_unhealthy(tmp_path, monkeypa
     monkeypatch.setattr(launcher, "_pid_alive", lambda pid: True)
 
     assert launcher.run_desktop_app(tmp_path) == 0
-    assert spawned == [(tmp_path, 8502)]
+    assert spawned == [(tmp_path, port_b)]
 
 
 def test_existing_instance_clears_stale_lock_after_health_timeout(tmp_path, monkeypatch):
     launcher = _load_launcher()
     monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
-    launcher._write_lock(8501)
+    launcher._write_lock(launcher.PORT_FALLBACKS[0])
     monkeypatch.setattr(launcher, "_pid_alive", lambda pid: True)
     monkeypatch.setattr(launcher, "_health_ok", lambda port: False)
     monkeypatch.setattr(launcher, "HEALTH_POLL_SEC", 0.0)
@@ -936,6 +949,43 @@ def test_pick_port_skips_a_port_that_is_in_use(monkeypatch):
 
     monkeypatch.setattr(launcher, "_port_free", lambda port: False)
     assert launcher._pick_port() is None
+
+
+def test_launcher_ports_do_not_overlap_audio_tabs_range():
+    """Audio Tabs (sibling repo) binds 8501–8510; Tools must stay out of that band."""
+    launcher = _load_launcher()
+    audio_tabs_ports = set(range(8501, 8511))
+    tools_ports = set(launcher.PORT_FALLBACKS)
+    assert tools_ports.isdisjoint(audio_tabs_ports)
+    assert launcher.DEFAULT_PORT == 8521
+    assert launcher.PORT_FALLBACKS == (8521, 8522, 8523, 8524, 8525)
+
+
+def test_existing_instance_ignores_foreign_product_lock(tmp_path, monkeypatch):
+    """A lock without our product id must not steal focus (e.g. leftover/shared path)."""
+    launcher = _load_launcher()
+    monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
+    lock_path = tmp_path / launcher.LOCK_FILENAME
+    lock_path.write_text(
+        json.dumps({"pid": os.getpid(), "port": 8502, "product": "audio-tabs"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(launcher, "_health_ok", lambda port: True)
+    assert launcher._existing_instance() is None
+    # Foreign lock is cleared so Tools can start cleanly on its own ports.
+    assert launcher._read_lock() is None
+
+
+def test_write_lock_stamps_audio_tools_product(tmp_path, monkeypatch):
+    launcher = _load_launcher()
+    monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
+    launcher._write_lock(8521)
+    data = launcher._read_lock()
+    assert data == {
+        "pid": os.getpid(),
+        "port": 8521,
+        "product": launcher.LOCK_PRODUCT,
+    }
 
 
 def test_ffmpeg_dir_candidates_include_bin_and_lib(tmp_path, monkeypatch):
@@ -1269,3 +1319,36 @@ def test_youtube_disclaimer_is_not_pro_only():
             assert not prev.startswith("if pro"), name
             assert "is_pro_mode" not in prev, name
 
+
+
+def test_launcher_rotates_an_oversized_log_and_keeps_one_backup(tmp_path, monkeypatch):
+    launcher = _load_launcher()
+    monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
+    monkeypatch.setattr(launcher, "LOG_MAX_BYTES", 10)
+    log = tmp_path / "logs" / "launcher.log"
+    backup = tmp_path / "logs" / "launcher.log.1"
+    log.parent.mkdir()
+    log.write_text("small\n", encoding="utf-8")
+    launcher._rotate_log(log)
+    assert log.is_file() and not backup.exists()
+
+    backup.write_text("older backup", encoding="utf-8")
+    log.write_text("x" * 11, encoding="utf-8")
+    launcher._log("fresh")
+    assert backup.read_text(encoding="utf-8") == "x" * 11
+    assert log.read_text(encoding="utf-8").endswith("fresh\n")
+    assert "x" * 11 not in log.read_text(encoding="utf-8")
+
+
+def test_spawn_server_rotates_server_log_before_appending(tmp_path, monkeypatch):
+    launcher = _load_launcher()
+    monkeypatch.setattr(launcher, "_user_data_root", lambda: tmp_path)
+    monkeypatch.setattr(launcher, "LOG_MAX_BYTES", 10)
+    monkeypatch.setattr(launcher, "_kill_child_with_parent", lambda pid: None)
+    monkeypatch.setattr(launcher.subprocess, "Popen", lambda *a, **k: types.SimpleNamespace(pid=1))
+    log = tmp_path / "logs" / "server.log"
+    log.parent.mkdir()
+    log.write_text("x" * 11, encoding="utf-8")
+    launcher._spawn_server(tmp_path, 8501)
+    assert (tmp_path / "logs" / "server.log.1").read_text(encoding="utf-8") == "x" * 11
+    assert log.read_text(encoding="utf-8") == ""

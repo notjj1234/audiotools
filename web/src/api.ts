@@ -120,6 +120,18 @@ export async function createIsolateJob(body: Record<string, unknown>): Promise<J
   return api("/v1/isolate/jobs", { method: "POST", body: JSON.stringify(body) });
 }
 
+/** Read a small JSON artifact (e.g. guitar_split_diagnostics) from its job URL. */
+export async function fetchJsonArtifact(url: string): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && typeof data === "object" ? (data as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getJob(jobId: string): Promise<JobResponse> {
   return api(`/v1/jobs/${jobId}`);
 }

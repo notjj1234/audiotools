@@ -28,9 +28,13 @@ from audio_to_tab.edition import (  # noqa: E402
     edition_window_title,
 )
 
-DEFAULT_PORT = 8501
-PORT_FALLBACKS = (8501, 8502, 8503, 8504, 8505)
+# Keep out of Audio Tabs' 8501–8510 band (sibling desktop app) so both can run.
+DEFAULT_PORT = 8521
+PORT_FALLBACKS = (8521, 8522, 8523, 8524, 8525)
 LOCK_FILENAME = "launcher.lock"
+LOCK_PRODUCT = "audio-tools"
+# A log larger than this is moved to <name>.1 before it is opened again.
+LOG_MAX_BYTES = 20 * 1024 * 1024
 # Frozen first-start imports Torch/Streamlit; 90s is tight on Windows HDD / Intel Mac.
 HEALTH_TIMEOUT_SEC = 180.0
 HEALTH_POLL_SEC = 0.3
@@ -125,10 +129,21 @@ def _user_log_dir() -> Path:
     return log_dir
 
 
+def _rotate_log(path: Path) -> None:
+    """Keep one backup. A locked or missing file is left as it is."""
+    try:
+        if path.stat().st_size > LOG_MAX_BYTES:
+            path.replace(path.with_name(path.name + ".1"))
+    except OSError:
+        pass
+
+
 def _log(message: str) -> None:
     try:
         ts = time.strftime("%Y-%m-%d %H:%M:%S")
-        with (_user_log_dir() / "launcher.log").open("a", encoding="utf-8") as log:
+        path = _user_log_dir() / "launcher.log"
+        _rotate_log(path)
+        with path.open("a", encoding="utf-8") as log:
             log.write(f"{ts} {message.rstrip()}\n")
     except OSError:
         pass
@@ -140,7 +155,9 @@ def _enable_crash_log() -> None:
         import faulthandler
 
         # Held for the process lifetime on purpose; faulthandler writes to it on fault.
-        handle = (_user_log_dir() / "crash.log").open("a", encoding="utf-8")
+        crash_path = _user_log_dir() / "crash.log"
+        _rotate_log(crash_path)
+        handle = crash_path.open("a", encoding="utf-8")
         faulthandler.enable(file=handle, all_threads=True)
     except Exception:
         _log("Could not enable the native crash log")
@@ -163,6 +180,7 @@ def _attach_pywebview_log() -> None:
         target = str(path)
         if any(getattr(handler, "baseFilename", None) == target for handler in logger.handlers):
             return
+        _rotate_log(path)
         handler = logging.FileHandler(path, encoding="utf-8")
         handler.setFormatter(
             logging.Formatter("%(asctime)s pywebview %(levelname)s %(message)s")
@@ -229,6 +247,10 @@ def _read_lock() -> dict | None:
         return None
     if not isinstance(data, dict):
         return None
+    # Reject locks from another product (or pre-stamp leftovers) so we never
+    # focus Audio Tabs / a foreign Streamlit on an overlapping port.
+    if data.get("product") != LOCK_PRODUCT:
+        return None
     try:
         pid = int(data.get("pid", 0))
         port = int(data.get("port", 0))
@@ -236,13 +258,17 @@ def _read_lock() -> dict | None:
         return None
     if pid <= 0 or port <= 0:
         return None
-    return {"pid": pid, "port": port}
+    return {"pid": pid, "port": port, "product": LOCK_PRODUCT}
 
 
 def _write_lock(port: int) -> None:
     path = _lock_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"pid": os.getpid(), "port": int(port)}
+    payload = {
+        "pid": os.getpid(),
+        "port": int(port),
+        "product": LOCK_PRODUCT,
+    }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
 
@@ -460,11 +486,32 @@ def _wait_until_healthy(port: int, timeout: float, is_alive=None) -> bool:
 
 def _existing_instance() -> dict | None:
     """The pid/port of a live sibling instance, or None if we should start one."""
+    path = _lock_path()
+    raw: dict | None = None
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(parsed, dict):
+            raw = parsed
+    except (OSError, json.JSONDecodeError):
+        raw = None
+
+    # Foreign / unstamped lock: clear it so we do not wait on Audio Tabs' port.
+    if raw is not None and raw.get("product") != LOCK_PRODUCT:
+        _log(
+            f"Ignoring foreign launcher.lock product={raw.get('product')!r}; clearing"
+        )
+        _clear_lock()
+        return None
+
     data = _read_lock()
     if data is None:
         return None
     pid = data["pid"]
     port = data["port"]
+    if port not in PORT_FALLBACKS:
+        _log(f"Lock port={port} outside Tools range; clearing")
+        _clear_lock()
+        return None
     if not _pid_alive(pid):
         _log(f"Stale lock for dead pid={pid}; clearing")
         _clear_lock()
@@ -757,7 +804,9 @@ def _spawn_server(workdir: Path, port: int) -> subprocess.Popen:
         kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
     log_file = None
     try:
-        log_file = (_user_log_dir() / "server.log").open("a", encoding="utf-8")
+        log_path = _user_log_dir() / "server.log"
+        _rotate_log(log_path)
+        log_file = log_path.open("a", encoding="utf-8")
     except OSError:
         log_file = None
     try:
@@ -1334,7 +1383,9 @@ def run_desktop_app(workdir: Path) -> int:
 
     port = _pick_port()
     if port is None:
-        _show_error("Ports 8501–8505 are in use by other programs. Quit them and try again.")
+        _show_error(
+            "Ports 8521–8525 are in use by other programs. Quit them and try again."
+        )
         return 1
 
     url = f"http://127.0.0.1:{port}"

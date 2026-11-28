@@ -127,12 +127,13 @@ run_ui() {
     exit 1
   fi
   py="${VENV}/bin/python"
-  echo "Starting UI at http://127.0.0.1:8501"
+  echo "Starting UI at http://127.0.0.1:8521"
   export CI=1
   # Empty line satisfies Streamlit's one-time email prompt when stdin is not a TTY.
+  # Port 8521+ keeps Audio Tools off Audio Tabs' 8501–8510 band.
   printf '\n' | "$py" -m streamlit run ui/app.py \
     --server.address=127.0.0.1 \
-    --server.port=8501 \
+    --server.port=8521 \
     --server.headless=false \
     --browser.gatherUsageStats=false
 }
@@ -152,7 +153,7 @@ Targets:
   ./scripts/dev.sh test             Run pytest
   ./scripts/dev.sh eval             Run transcription eval harness
   ./scripts/dev.sh eval-lead-rhythm Score Lead/Rhythm vs local manifest
-  ./scripts/dev.sh ui               Start Streamlit UI (http://127.0.0.1:8501)
+  ./scripts/dev.sh ui               Start Streamlit UI (http://127.0.0.1:8521)
   ./scripts/dev.sh backend          Start FastAPI server (http://localhost:8000)
   ./scripts/dev.sh mixer-build      Build live stem mixer frontend (Node 18+)
   ./scripts/dev.sh region-picker-build  Build waveform region picker frontend (Node 18+)

@@ -13,6 +13,7 @@ import {
   isolateStartLabel,
 } from "./isolateSubmit";
 import { StableLabel } from "../pending";
+import { hasLeadRhythm, splitNotice, visibleStemIds, type LeadRhythmView, type SplitNotice } from "../leadRhythm";
 import {
   DEFAULT_TRACK_OPTIONS,
   DEMUCS_STEM_CHECKBOX_IDS,
@@ -32,8 +33,8 @@ const STEM_LABELS: Record<string, string> = {
   other: "Other",
   guitar: "Guitar",
   piano: "Piano",
-  lead_guitar: "Lead (legacy)",
-  rhythm_guitar: "Rhythm (legacy)",
+  lead_guitar: "Lead Guitar",
+  rhythm_guitar: "Rhythm Guitar",
   guitar1: "Guitar 1",
   guitar2: "Guitar 2",
   metronome: "Metronome",
@@ -157,6 +158,9 @@ export function IsolatePage() {
   });
   const [guitarTrack, setGuitarTrack] = useState<GuitarTrackChoice>("guitar_demucs_6s");
   const [vocalsInstrumentalOnly, setVocalsInstrumentalOnly] = useState(false);
+  const [leadRhythm, setLeadRhythm] = useState(false);
+  const [leadRhythmView, setLeadRhythmView] = useState<LeadRhythmView>("split");
+  const [notice, setNotice] = useState<SplitNotice | null>(null);
   const [processingMode, setProcessingMode] = useState("auto");
   const [lowEndRestoreDb, setLowEndRestoreDb] = useState(0);
   const [subBassDebleed, setSubBassDebleed] = useState(false);
@@ -371,6 +375,13 @@ export function IsolatePage() {
     if (resolved.guitar_refine) {
       body.guitar_refine = true;
     }
+    // Opt-in only (off by default).
+    if (leadRhythm && resolved.emit_stems.includes("guitar") && !resolved.two_stems) {
+      body.lead_rhythm = true;
+      // Ticking the box means "I want Lead and Rhythm": split whenever two parts
+      // are found (labels may be a best guess); one part stays one Guitar.
+      body.lead_rhythm_mode = "prefer_split";
+    }
     if (useRegion) {
       body.start_sec = regionStart;
       body.end_sec = regionEnd;
@@ -395,16 +406,38 @@ export function IsolatePage() {
   }
 
   const practice = practiceFromJob(job);
+  const audioIds = useMemo(
+    () =>
+      job && job.status === "succeeded"
+        ? Object.keys(job.artifacts).filter((kind) => AUDIO_KINDS.has(kind))
+        : [],
+    [job],
+  );
+  const splitAvailable = hasLeadRhythm(audioIds) && audioIds.includes("guitar");
   const stems: StemInfo[] = useMemo(() => {
     if (!job || job.status !== "succeeded") return [];
-    return Object.entries(job.artifacts)
-      .filter(([kind]) => AUDIO_KINDS.has(kind))
-      .map(([id, url]) => ({
-        id,
-        label: STEM_LABELS[id] ?? id,
-        url,
-      }));
-  }, [job]);
+    // Lead + Rhythm or the single Guitar, never all three (double guitar).
+    return visibleStemIds(audioIds, leadRhythmView).map((id) => ({
+      id,
+      label: STEM_LABELS[id] ?? id,
+      url: job.artifacts[id],
+    }));
+  }, [job, audioIds, leadRhythmView]);
+
+  const splitDiagUrl =
+    job && job.status === "succeeded" ? job.artifacts.guitar_split_diagnostics : undefined;
+  useEffect(() => {
+    let live = true;
+    setNotice(null);
+    if (splitDiagUrl) {
+      void api.fetchJsonArtifact(splitDiagUrl).then((diag) => {
+        if (live) setNotice(splitNotice(diag));
+      });
+    }
+    return () => {
+      live = false;
+    };
+  }, [splitDiagUrl]);
 
   const downloadArtifacts = job?.artifacts
     ? Object.entries(job.artifacts).filter(
@@ -482,6 +515,22 @@ export function IsolatePage() {
                     {label}
                   </label>
                 ))}
+                {guitarTrack !== "none" && !vocalsInstrumentalOnly ? (
+                  <label className="field" style={{ marginTop: "0.5rem" }}>
+                    <input
+                      type="checkbox"
+                      checked={leadRhythm}
+                      onChange={(e) => setLeadRhythm(e.target.checked)}
+                    />{" "}
+                    Split lead and rhythm guitar
+                    <span className="hint" style={{ display: "block" }}>
+                      Tries to split the guitar into Lead and Rhythm by when each part plays and
+                      where it sits in the mix. Whenever two parts are found you get Lead and
+                      Rhythm (if it isn't sure which is the lead, the labels are a best guess).
+                      Only a single guitar part stays one Guitar track, with a note saying why.
+                    </span>
+                  </label>
+                ) : null}
               </fieldset>
             </>
           )}
@@ -713,8 +762,40 @@ export function IsolatePage() {
               </a>
             ))}
           </div>
+          {notice ? (
+            <p className={notice.level === "info" ? "hint" : "hint split-notice"} role="status">
+              {notice.level === "warning" ? "Best guess: " : null}
+              {notice.text}
+            </p>
+          ) : null}
+          {splitAvailable ? (
+            <fieldset className="field" style={{ marginTop: "0.5rem" }}>
+              <legend>Guitar in the mixer</legend>
+              {(
+                [
+                  ["split", "Lead + Rhythm"],
+                  ["combined", "One Guitar track"],
+                ] as const
+              ).map(([view, label]) => (
+                <label key={view} className="field" style={{ display: "inline-flex", marginRight: "1rem" }}>
+                  <input
+                    type="radio"
+                    name="lead_rhythm_view"
+                    checked={leadRhythmView === view}
+                    onChange={() => setLeadRhythmView(view)}
+                  />{" "}
+                  {label}
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
           {stems.length > 0 && (
-            <StemMixer stems={stems} analysis={practice.analysis} tab={practice.tab} />
+            <StemMixer
+              key={stems.map((s) => s.id).join("|")}
+              stems={stems}
+              analysis={practice.analysis}
+              tab={practice.tab}
+            />
           )}
         </div>
       )}

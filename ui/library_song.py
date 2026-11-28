@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 TRASH_DIR_NAME = "library_trash"
@@ -120,6 +121,57 @@ def list_trashed_songs(data_dir: Path) -> list[Path]:
     found = [path for path in trash.iterdir() if path.is_dir() and (path / "meta.json").is_file()]
     found.sort(key=lambda path: path.name)
     return found
+
+
+def _trash_entries(data_dir: Path) -> list[Path]:
+    trash = Path(data_dir) / TRASH_DIR_NAME
+    if not trash.is_dir() or trash.is_symlink():
+        return []
+    return [path for path in trash.iterdir() if path.is_dir()]
+
+
+def trash_usage(data_dir: Path) -> tuple[int, int]:
+    """(song count, total bytes) held in the trash."""
+    entries = _trash_entries(data_dir)
+    total = 0
+    for entry in entries:
+        if entry.is_symlink():
+            continue
+        for item in entry.rglob("*"):
+            try:
+                if item.is_file() and not item.is_symlink():
+                    total += item.stat().st_size
+            except OSError:
+                continue
+    return len(entries), total
+
+
+def purge_trashed_song(trashed: Path, data_dir: Path) -> bool:
+    """Permanently delete one trashed song. True when gone (or already absent).
+
+    Only a real folder that resolves to a direct child of the trash is removed.
+    """
+    trash = Path(data_dir).resolve() / TRASH_DIR_NAME
+    if Path(trashed).is_symlink():
+        return False
+    try:
+        path = Path(trashed).resolve()
+    except OSError:
+        return False
+    if path.parent != trash:
+        return False
+    if not path.exists():
+        return True
+    if not path.is_dir():
+        return False
+    shutil.rmtree(path, ignore_errors=True)
+    return not path.exists()
+
+
+def empty_library_trash(data_dir: Path) -> tuple[int, int]:
+    """Permanently delete every trashed song. Returns (purged, failed)."""
+    results = [purge_trashed_song(entry, data_dir) for entry in _trash_entries(data_dir)]
+    return results.count(True), results.count(False)
 
 
 def locale_text(locale: str, key: str) -> str:

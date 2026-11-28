@@ -1,0 +1,53 @@
+{
+  "id": "ev_eeb8e294479d85b450ab9ffd07f7d6d77409939a4bf57f3a8ab26dc26a50070a",
+  "subject": {
+    "kind": "text",
+    "sha256": "d88a4dbef0ca728679469ca1dc0171efa275ab7d36db2b50f863fd59faf867a8",
+    "name": "REFERENCE.md"
+  },
+  "operation": "core_text_read",
+  "params": {
+    "limit": 300,
+    "offset": 0,
+    "path": "/Users/JJ/Documents/- PERSONAL PROJECTS GITHUB -/jj_audio_website/docs/research/moises/REFERENCE.md"
+  },
+  "result": {
+    "cut_lines": [],
+    "encoding": "utf8",
+    "file_size": 2022,
+    "lines": 39,
+    "more": false,
+    "offset": 0,
+    "path": "/Users/JJ/Documents/- PERSONAL PROJECTS GITHUB -/jj_audio_website/docs/research/moises/REFERENCE.md",
+    "replaced_sequences": 0,
+    "text": "# Moises reference handoff — 2026-10-23\n\nGive this file to the next session before any implementation.\n\n## Current build\n\nWindows Moises **2.1.0** build **`261021a1gygumpb`**. Feed checked the same day. Details and hashes: `docs/plans/moises-parity/_work/scan-2026-10-23/MANIFEST.json`.\n\n## Read order\n\n1. `PAGE-INVENTORY.md` — every page this scan actually found.\n2. `FUNCTION-INVENTORY.md` — shell actions and IPC.\n3. `FEATURE-DEEP-DIVE.md` — what is behavior, what is help text, what is unknown.\n4. `COVERAGE-LEDGER.md` — the counts.\n5. `docs/plans/moises-parity/13-PARITY-DELTA.md` — what changed in our beliefs.\n6. `docs/plans/moises-parity/04-SCOPE-CUT.md` — what we build.\n\n## Thesis that still stands\n\nGuitar tab and tab/PDF export, local-first processing, and the practice player are the product. Moises Studio is a separate hosted DAW. Do not raise `MPS_MIN_RAM_GB`. Do not unify Desktop Interface Lite with hosted `lite`. Do not copy a mixer law. Desktop isolation stays serial. No commit, push, or PR unless the user asks in that conversation.\n\n## Thesis this scan did not verify\n\nThat the hosted player lacks tab, chords, or a metronome. The player route exists. It was not opened. Treat older \"no tab\" notes as still the working assumption, labeled historical, until P-S2-08 is walked.\n\n## Hard corrections\n\n- Audify is not the 2.1.0 capture addon. The unpacked README says it shipped through 2.0. The addon is `capture.node`.\n- `sparkbars` is the Studio icon id, not a new app.\n- Prices were not on the public pages this scan opened. The help credit article disagrees with itself (Premium 200 in the list, 100 in example 3).\n- The local renderer does not mount the mixer. That part of the old teardown still matches, now on a new bundle hash `index-C76vPLoN.js`.\n\n## Do not do\n\nPurchase, start a paid trial, upload private audio, invite collaborators, delete an account, or dismiss a fullscreen video to reach the window.\n\n## Resume\n\n`docs/plans/moises-parity/_work/scan-2026-10-23/STATE.md`.\n",
+    "total_lines": 39
+  },
+  "summary": "REFERENCE.md: lines 1–39 of 39 (UTF-8).",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "text_as_stored",
+      "message": "The file is read as text as it is stored: nothing is run, rendered or formatted, and text a program builds or downloads while it runs isn't here."
+    }
+  ],
+  "coverage": {
+    "status": "complete",
+    "examined": 39,
+    "total": 39
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/Users/JJ/Documents/- PERSONAL PROJECTS GITHUB -/jj_audio_website/docs/research/moises/REFERENCE.md"
+    }
+  ],
+  "links": []
+}

@@ -47,3 +47,35 @@ def test_text_export_is_readable():
     assert "[C]hello" in text
     assert "{key: C}" in text
     assert "{time: 4/4}" in text
+
+
+def test_exports_of_an_old_analysis_use_basic_names(tmp_path):
+    """A saved Cmaj7/E loads as C, so neither export carries the seventh or a bass note."""
+    import json
+
+    from audio_to_tab.analysis import load_analysis, save_analysis
+
+    path = tmp_path / "analysis.json"
+    save_analysis(
+        path,
+        AnalysisResult(
+            duration_sec=2.0,
+            bpm=120.0,
+            key="C",
+            beats=(0.0, 0.5, 1.0, 1.5),
+            beats_per_measure=4,
+            chords=(ChordEvent(0.0, 2.0, "C", 0.9),),
+            lyrics=(LyricLine(0.0, 0.5, "hello", ()),),
+        ),
+    )
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["chords"][0]["symbol"] = "Cmaj7/E"
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    loaded = load_analysis(path)
+    assert loaded is not None
+    document = build_chart(loaded, title="Demo")
+
+    root = ET.fromstring(chart_to_musicxml(document))
+    assert root.find(".//harmony/kind").text == "major"
+    assert root.find(".//harmony/bass") is None
+    assert "[C]hello" in chart_to_text(document)

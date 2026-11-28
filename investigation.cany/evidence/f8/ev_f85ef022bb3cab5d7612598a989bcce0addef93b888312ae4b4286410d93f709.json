@@ -1,0 +1,2092 @@
+{
+  "id": "ev_f85ef022bb3cab5d7612598a989bcce0addef93b888312ae4b4286410d93f709",
+  "subject": {
+    "kind": "directory",
+    "sha256": "0b933fc1ea221420d900730c57d44944ed9c8c641e4ec14d4e03794da7961c41",
+    "name": "Moises.app"
+  },
+  "operation": "core_archive_show",
+  "params": {
+    "if_tampered": true,
+    "limit": 300,
+    "max_depth": 1,
+    "max_entries": 200000,
+    "max_total_bytes": 4294967296,
+    "offset": 0,
+    "path": "/Applications/Moises.app"
+  },
+  "result": {
+    "by_kind": {
+      "asar": 1,
+      "binary": 63,
+      "binary-plist": 1,
+      "css": 1,
+      "directory": 1342,
+      "html": 2,
+      "javascript": 2880,
+      "json": 170,
+      "link": 14,
+      "macho": 16,
+      "native-addon": 2,
+      "nib": 1,
+      "png": 15,
+      "source-map": 3452,
+      "text": 353,
+      "typescript": 12,
+      "unpacked": 16,
+      "xml-plist": 12
+    },
+    "containers": [
+      {
+        "entries": 7716,
+        "header_bytes": 1763756,
+        "kind": "asar",
+        "path": "Contents/Resources/app.asar!/",
+        "rejected_names": [],
+        "truncated": false
+      }
+    ],
+    "content_id": "inv_0b933fc1ea221420d900730c57d44944ed9c8c641e4ec14d4e03794da7961c41",
+    "contradictions": [],
+    "entries": [
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/af.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/am.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ar.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/bg.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/bn.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ca.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/cs.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/da.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/de.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/el.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/en.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/en_GB.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/es.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/es_419.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/et.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/fa.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/fi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/fil.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/fr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/gu.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/he.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/hi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/hr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/hu.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/id.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/it.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ja.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/kn.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ko.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/lt.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/lv.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ml.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/mr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ms.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/nb.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/nl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/pl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/pt_BR.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/pt_PT.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ro.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ru.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/sk.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/sl.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/sr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/sv.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/sw.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ta.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/te.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/th.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/tr.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/uk.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/ur.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/vi.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/zh_CN.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/zh_TW.lproj",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/native",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-win32-x64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/Resources",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server-darwin-arm64/dist/MoisesPluginServer.app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/node_modules/@moises-ai/plugin-server/bin",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/native/capture",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/native/capture/prebuilds",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/native/capture/prebuilds/darwin-arm64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Resources/app.asar.unpacked/native/capture/prebuilds/win32-x64",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Mantle.framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (GPU).app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Plugin).app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Renderer).app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper.app",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/ReactiveObjC.framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Squirrel.framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Squirrel.framework/Versions",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Squirrel.framework/Versions/A",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Squirrel.framework/Versions/A/Resources",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Squirrel.framework/Versions/A/_CodeSignature",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/ReactiveObjC.framework/Versions",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/ReactiveObjC.framework/Versions/A",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/ReactiveObjC.framework/Versions/A/Resources",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/ReactiveObjC.framework/Versions/A/_CodeSignature",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper.app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper.app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper.app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Renderer).app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Renderer).app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Renderer).app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Plugin).app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Plugin).app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (Plugin).app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (GPU).app/Contents",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (GPU).app/Contents/MacOS",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Moises Helper (GPU).app/Contents/_CodeSignature",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Mantle.framework/Versions",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Mantle.framework/Versions/A",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Mantle.framework/Versions/A/Resources",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Mantle.framework/Versions/A/_CodeSignature",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Helpers",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Libraries",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/_CodeSignature",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/af.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/af_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/af_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/af_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/am.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/am_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/am_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/am_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ar.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ar_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ar_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ar_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bg.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bg_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bg_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bg_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bn.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bn_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bn_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/bn_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ca.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ca_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ca_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ca_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/cs.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/cs_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/cs_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/cs_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/da.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/da_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/da_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/da_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/de.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/de_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/de_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/de_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/el.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/el_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/el_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/el_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_GB.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_GB_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_GB_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_GB_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/en_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_419.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_419_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_419_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_419_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/es_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/et.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/et_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/et_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/et_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fa.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fa_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fa_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fa_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fi.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fi_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fi_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fi_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fil.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fil_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fil_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fil_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fr.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fr_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fr_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/fr_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/gu.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/gu_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/gu_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/gu_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/he.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/he_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/he_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/he_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hi.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hi_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hi_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hi_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hr.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hr_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hr_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hr_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hu.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hu_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hu_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/hu_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/id.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/id_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/id_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/id_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/it.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/it_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/it_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/it_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ja.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ja_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ja_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ja_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/kn.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/kn_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/kn_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/kn_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ko.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ko_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ko_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ko_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lt.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lt_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lt_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lt_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lv.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lv_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lv_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/lv_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ml.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ml_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ml_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ml_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/mr.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/mr_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/mr_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/mr_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ms.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ms_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ms_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ms_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nb.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nb_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nb_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nb_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nl.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nl_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nl_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/nl_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pl.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pl_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pl_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pl_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_BR.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_BR_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_BR_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_BR_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_PT.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_PT_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_PT_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/pt_PT_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ro.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ro_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ro_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ro_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ru.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ru_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ru_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/ru_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sk.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sk_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sk_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sk_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sl.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sl_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sl_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sl_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sr.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sr_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sr_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sr_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sv.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sv_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sv_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sv_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sw.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sw_FEMININE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sw_MASCULINE.lproj",
+        "role": "framework",
+        "size": 0
+      },
+      {
+        "depth": 0,
+        "kind": "directory",
+        "path": "Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/sw_NEUTER.lproj",
+        "role": "framework",
+        "size": 0
+      }
+    ],
+    "entries_total": 8353,
+    "files": 6981,
+    "hashed_bytes": 415043447,
+    "path": "/Applications/Moises.app",
+    "root": "Moises.app",
+    "root_kind": "directory",
+    "truncated": false,
+    "unopened_nested": 0
+  },
+  "summary": "Moises.app (directory) holds 6981 files in 8353 entries; 0 nested container(s).",
+  "confidence": "observed",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "no_disk_images",
+      "message": "Disk images (DMG), installers (PKG/MSI) and compressed tarballs are listed as single files, not opened."
+    }
+  ],
+  "coverage": {
+    "status": "partial",
+    "examined": 300,
+    "total": 8353,
+    "next_offset": 300
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/Applications/Moises.app"
+    }
+  ],
+  "links": []
+}

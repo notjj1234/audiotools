@@ -71,6 +71,30 @@ def test_round_trip(tmp_path):
     assert loaded.lyrics[0].words[0].text == "hello"
 
 
+def test_old_chord_names_load_as_basic_names(tmp_path):
+    """Files written before the vocabulary cut show root + optional m, in sharps."""
+    path = tmp_path / "analysis.json"
+    save_analysis(path, _full_result())
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["chords"] = [
+        {"start": 0.0, "end": 1.0, "symbol": "Cmaj7", "confidence": 0.5, "simple": "C", "medium": "Cmaj7"},
+        {"start": 1.0, "end": 2.0, "symbol": "C/E", "confidence": 0.5, "simple": "C/E", "medium": "C/E"},
+        {"start": 2.0, "end": 3.0, "symbol": "Bbm7", "confidence": 0.5},
+        {"start": 3.0, "end": 4.0, "symbol": "N", "confidence": 1.0},
+    ]
+    path.write_text(json.dumps(raw), encoding="utf-8")
+
+    loaded = load_analysis(path)
+
+    assert loaded is not None
+    assert [(c.symbol, c.simple, c.medium) for c in loaded.chords] == [
+        ("C", "C", "C"),
+        ("C", "C", "C"),
+        ("A#m", "", ""),
+        ("N", "", ""),
+    ]
+
+
 def test_missing_file_returns_none(tmp_path):
     assert load_analysis(tmp_path / "missing.json") is None
 

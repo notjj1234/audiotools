@@ -99,8 +99,8 @@ class IsolateJobCreateRequest(BaseModel):
     @classmethod
     def _validate_lead_rhythm_mode(cls, v: str) -> str:
         mode = v.strip().lower()
-        if mode not in ("confident", "best_effort"):
-            raise ValueError("lead_rhythm_mode must be confident or best_effort")
+        if mode not in ("confident", "prefer_split", "best_effort"):
+            raise ValueError("lead_rhythm_mode must be confident, prefer_split or best_effort")
         return mode
 
     @field_validator("fold_other_mode")

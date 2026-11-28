@@ -1,14 +1,19 @@
-"""One grammar: parse, render, levels, capo, and chord tones."""
+"""One grammar: parse, render, the basic product name, capo, and chord tones."""
 
 from __future__ import annotations
 
+import re
+
+import pytest
+
 from audio_to_tab.chord_symbols import (
-    DETECTED_QUALITIES,
     PITCHES,
+    TEMPLATE_QUALITIES,
     Chord,
+    basic_from_text,
+    basic_symbol,
     capo_shape,
     chord_tones,
-    level_symbol,
     parse,
     parse_render,
     render,
@@ -18,12 +23,13 @@ from audio_to_tab.chords import _TEMPLATE_NAMES
 
 
 def test_round_trip_every_template():
-    assert len(_TEMPLATE_NAMES) == 12 * len(DETECTED_QUALITIES)
+    assert len(_TEMPLATE_NAMES) == 12 * len(TEMPLATE_QUALITIES)
     for name in _TEMPLATE_NAMES:
         chord = parse(name)
         assert chord is not None
-        assert chord.quality in DETECTED_QUALITIES
+        assert chord.quality in TEMPLATE_QUALITIES
         assert render(chord) == name
+        assert basic_symbol(chord) == name
 
 
 def test_flats_in_sharps_out_and_slash_bass():
@@ -47,41 +53,42 @@ def test_garbage_is_none():
     assert parse("Cadd9") is not None
 
 
-def test_every_level_rule():
-    cmaj7 = parse("Cmaj7")
-    assert level_symbol(cmaj7, "simple") == "C"
-    assert level_symbol(cmaj7, "medium") == "Cmaj7"
-    assert level_symbol(cmaj7, "advanced") == "Cmaj7"
-    assert level_symbol(parse("CmMaj7"), "medium") == "CmMaj7"
-    assert level_symbol(parse("CmMaj7"), "advanced") == "CmMaj7"
-    dm7 = parse("Dm7")
-    assert level_symbol(dm7, "simple") == "Dm"
-    assert level_symbol(dm7, "medium") == "Dm7"
-    g7 = parse("G7/F")
-    assert level_symbol(g7, "simple") == "G/F"
-    assert level_symbol(g7, "medium") == "G7/F"
-    assert level_symbol(parse("Asus4"), "simple") == "Asus4"
-    assert level_symbol(parse("Csus2"), "medium") == "Csus2"
-    assert level_symbol(parse("C5"), "advanced") == "C5"
-    assert level_symbol(parse("C5"), "simple") == "C5"
-    maj9 = Chord("C", "maj9")
-    assert level_symbol(maj9, "simple") == "C"
-    assert level_symbol(maj9, "medium") == "C"
-    assert level_symbol(maj9, "advanced") == "Cmaj9"
-    six = parse("C6")
-    assert level_symbol(six, "simple") == "C"
-    assert level_symbol(six, "medium") == "C"
-    assert level_symbol(six, "advanced") == "C6"
-    altered = Chord("G", "7b9", "F")
-    assert level_symbol(altered, "simple") == "G/F"
-    assert level_symbol(altered, "medium") == "G7/F"
-    assert level_symbol(altered, "advanced") == "G7b9/F"
-    half = parse("F#m7b5")
-    assert level_symbol(half, "simple") == "F#dim"
-    assert level_symbol(half, "medium") == "F#m7b5"
-    dim7 = parse("Cdim7")
-    assert level_symbol(dim7, "simple") == "Cdim"
-    assert level_symbol(dim7, "medium") == "Cdim7"
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("C", "C"),
+        ("Cmaj7", "C"),
+        ("F#7", "F#"),
+        ("Bb", "A#"),
+        ("Bbm7", "A#m"),
+        ("E5", "E"),
+        ("Csus4", "C"),
+        ("Csus2", "C"),
+        ("Caug", "C"),
+        ("C6", "C"),
+        ("Cadd9", "C"),
+        ("C/E", "C"),
+        ("G7b9/F", "G"),
+        ("Bdim", "Bm"),
+        ("F#m7b5", "F#m"),
+        ("Cdim7", "Cm"),
+        ("CmMaj7", "Cm"),
+        ("Dm6", "Dm"),
+        ("Am/G", "Am"),
+        ("N", "N"),
+        ("", "N"),
+        (None, "N"),
+        ("not-a-chord", "not-a-chord"),
+    ],
+)
+def test_basic_name_is_root_plus_optional_m_in_sharps(raw, expected):
+    assert basic_from_text(raw) == expected
+
+
+def test_basic_symbol_ignores_extension_and_bass():
+    assert basic_symbol(Chord("G", "7b9", "F")) == "G"
+    assert basic_symbol(Chord("C", "maj9")) == "C"
+    assert basic_symbol(Chord("A", "m9", "G")) == "Am"
 
 
 def test_capo_matches_frontend_shapes():
@@ -106,8 +113,8 @@ def test_auto_spelling_follows_the_key():
     assert render(parse("A#"), spelling="sharp") == "A#"
 
 
-def test_btc_mir_eval_symbols_round_trip_through_levels():
-    """Every product symbol `_mir_eval_to_symbol` can emit must parse and level."""
+def test_btc_mir_eval_symbols_are_basic_names():
+    """Every symbol `_mir_eval_to_symbol` can emit is a root plus optional m."""
     from audio_to_tab.chord_neural import _mir_eval_to_symbol
 
     labels = (
@@ -132,9 +139,4 @@ def test_btc_mir_eval_symbols_round_trip_through_levels():
     )
     for label in labels:
         symbol = _mir_eval_to_symbol(label)
-        if symbol == "N":
-            continue
-        chord = parse(symbol)
-        assert chord is not None, symbol
-        for level in ("simple", "medium", "advanced"):
-            assert isinstance(level_symbol(chord, level), str)
+        assert re.fullmatch(r"[A-G]#?m?|N", symbol), (label, symbol)

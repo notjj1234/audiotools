@@ -1,0 +1,70 @@
+{
+  "id": "ev_11b2c5b47d071cae99f6249ae4ffba824e3ae95994351d44bc26fcaa7b84c202",
+  "subject": {
+    "kind": "javascript",
+    "name": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/craft-anything-extract-c0fd1ace79e698b2/out/main/index.js"
+  },
+  "operation": "js_sources_restore",
+  "params": {
+    "additional_paths": [],
+    "extraction_mode": "inspection",
+    "output_directory": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored",
+    "path": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/craft-anything-extract-c0fd1ace79e698b2/out/main/index.js",
+    "rewrite_level": "standard"
+  },
+  "result": {
+    "inputs": [
+      {
+        "bytes": 66147,
+        "input": "index.js",
+        "input_index": 0,
+        "sha256": "7aee9bab8197932b8e9916d550c152869c8758066366eb9998f67df5704ff590"
+      }
+    ],
+    "manifest": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored/manifest.json",
+    "notes": [],
+    "originals_truncated": false,
+    "output_directory": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored",
+    "outputs": [
+      {
+        "from": "index.js",
+        "kind": "pretty",
+        "path": "pretty/index.js",
+        "rewrites": 371,
+        "sha256": "a8e5a0a88d431f8f008a9541f3a10dabd294857a51989e23dabf642d84ae5d98"
+      }
+    ],
+    "outputs_total": 1
+  },
+  "summary": "Recovered 1 input(s) into /var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored: 1 pretty-printed, 0 bundle module file(s), 0 original source(s) from maps.",
+  "confidence": "derived",
+  "authority": "original-files",
+  "environment": {
+    "clean_room": false,
+    "engine": "builtin",
+    "engine_version": "0.6.1",
+    "host": "macos-aarch64"
+  },
+  "limitations": [
+    {
+      "code": "rewrites_conservative",
+      "message": "Only rewrites that provably keep meaning are applied; local variable names stay minified."
+    },
+    {
+      "code": "scope_hoisted",
+      "message": "Rollup/Vite production chunks merge modules into one scope; they are pretty-printed but not split."
+    }
+  ],
+  "coverage": {
+    "status": "complete",
+    "examined": 1,
+    "total": 1
+  },
+  "locations": [
+    {
+      "kind": "path",
+      "value": "/var/folders/j3/dppqlrjj7rg46qm2rf_wx6c80000gq/T/moises-main-restored"
+    }
+  ],
+  "links": []
+}

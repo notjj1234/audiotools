@@ -150,17 +150,22 @@ ACCENT_TOKENS: dict[AccentId, dict[str, str]] = {
     'custom': {},  # Populated dynamically from user custom tokens
 }
 
+# Amber is the accent (headings, primary action, selection), not the body text:
+# owner decision 2026-11-27 (docs/ui-issues.md I-633). Text values are the Home
+# tokens in ui/design_tokens.py; each clears 8:1 on TYRIAN_BLUE.
 TYRIAN_BASE_DARK: dict[str, str] = {
     '--color-bg-deepest': TYRIAN_BLUE,
     '--color-bg-deep': TYRIAN_BLUE,
     '--color-bg-raised': TYRIAN_BLUE_RAISED,
-    '--color-bg-highlight': TYRIAN_BLUE_RAISED,
-    '--color-text-primary': YELLOW_ORANGE,
-    '--color-text-secondary': YELLOW_ORANGE,
-    '--color-text-muted': YELLOW_ORANGE_HOVER,
-    '--color-border-subtle': 'rgba(246, 173, 73, 0.35)',
+    '--color-bg-highlight': '#35557C',
+    '--color-bg-inset': '#142033',
+    '--color-text-primary': '#F4F7FB',
+    '--color-text-secondary': '#D5DEEA',
+    '--color-text-muted': '#B7C3D4',
+    '--color-text-heading': YELLOW_ORANGE,
+    '--color-border-subtle': 'rgba(168, 184, 204, 0.28)',
     '--color-link': YELLOW_ORANGE,
-    '--color-waveform-bg': TYRIAN_BLUE,
+    '--color-waveform-bg': '#142033',
 }
 
 TYRIAN_BASE_LIGHT: dict[str, str] = {

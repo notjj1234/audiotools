@@ -29,19 +29,27 @@ from ui.setlists import (
     save_setlists,
 )
 from ui.design_tokens import ui_v2_enabled
-from ui.isolate_jobs import list_jobs, merge_library_runs
+from ui.isolate_jobs import (
+    forget_jobs_for_run,
+    list_jobs,
+    merge_library_runs,
+    sweep_storage_once,
+)
 from ui.isolate_state import (
     ISOLATE_SKIP_REHYDRATE_KEY,
+    ISOLATE_UI_STATE_FILENAME,
     ISOLATE_USER_ID_FILENAME,
     LISTEN_PICKER_NEXT_KEY,
     SHELL_TAB_KEY,
     SOURCE_KIND_YOUTUBE,
     add_open_mix_tab,
+    apply_stored_isolate_ui_state,
     format_source_title,
     infer_source_kind,
     load_persist_isolate_user_id,
     open_mix_shell,
     open_new_draft_tab,
+    read_isolate_ui_state,
     recent_runs_with_owner_fallback,
     youtube_video_id,
 )
@@ -182,8 +190,22 @@ def _go(page_name: str) -> None:
     st.switch_page(str(Path(__file__).with_name(page_name)))
 
 
+def _load_saved_tabs() -> None:
+    """Fill this session's tab strip from disk before Home adds a tab.
+
+    The app opens on Home, and only Isolate restores the saved strip. Adding a
+    tab to the still-empty list first made Isolate skip its restore and then
+    save the one-tab list over every tab the user had open.
+    """
+    apply_stored_isolate_ui_state(
+        st.session_state,
+        read_isolate_ui_state(DATA_DIR / ISOLATE_UI_STATE_FILENAME),
+    )
+
+
 def open_new_separation() -> None:
     """Land on Isolate's upload form, with the New draft selected."""
+    _load_saved_tabs()
     open_new_draft_tab(st.session_state, fresh=True)
     _go("isolate.py")
 
@@ -365,6 +387,28 @@ def analysis_status_should_refresh_page(page: str, token: str, previous: str | N
     return token != previous
 
 
+def analysis_poll_interval(
+    status: dict | None,
+    *,
+    jobs_running: bool,
+    active_seconds: float,
+    idle_seconds: float,
+) -> float | None:
+    """Seconds between status checks, or None when nothing can start on its own.
+
+    Analysis only starts after a separation finishes (the worker hands off within
+    ~2 s, with no rerun here) or after a user action, which reruns anyway. So an
+    idle state with no job in flight needs no timer, and each skipped tick is one
+    fewer header-spinner flash.
+    """
+    if analysis_status_notice(status):
+        return active_seconds
+    state = str(status.get("state") or "") if isinstance(status, dict) else ""
+    if jobs_running or state not in {"", "idle"}:
+        return idle_seconds
+    return None
+
+
 def next_auto_analysis(
     rows: list[dict],
     *,
@@ -404,6 +448,7 @@ def auto_analysis_should_skip(ok: bool, message: str) -> bool:
 
 def open_saved_run(run_dir: str) -> None:
     """Open one local separation in the Isolate mixer."""
+    _load_saved_tabs()
     st.session_state.pop(ISOLATE_SKIP_REHYDRATE_KEY, None)
     st.session_state["isolate_run_dir"] = run_dir
     st.session_state["isolate_viewing_run_dir"] = run_dir
@@ -608,6 +653,7 @@ def apply_library_deletes(
             failed += 1
         else:
             moved += 1
+            forget_jobs_for_run(run_dir)
     return moved, failed
 
 
@@ -886,6 +932,7 @@ def _main_legacy() -> None:
 
 
 def main() -> None:
+    sweep_storage_once()
     if ui_v2_enabled():
         _main_v2()
         return

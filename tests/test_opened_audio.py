@@ -58,6 +58,8 @@ def test_opened_file_lands_on_a_new_tab_and_the_original_stays(tmp_path: Path, m
         ISOLATE_OUTPUT_NAME_PENDING_KEY,
         MIX_TAB_NOTICE_KEY,
         OPEN_MIX_TABS_KEY,
+        SETUP_STEP_KEY,
+        SETUP_STEP_SEPARATE,
         SHELL_TAB_KEY,
         SHELL_VIEW_NEXT_KEY,
         is_new_draft_tab,
@@ -125,6 +127,9 @@ def test_opened_file_lands_on_a_new_tab_and_the_original_stays(tmp_path: Path, m
     song_snap = session["isolate_draft_sources"][drafts[0]]
     assert song_snap["isolate_pending_audio_path"].endswith("Song.wav")
     assert Path(song_snap["isolate_pending_audio_path"]).read_bytes() == b"original-bytes"
+    # An opened file is already picked: both tabs land on Choose, not Drop.
+    assert session[SETUP_STEP_KEY] == SETUP_STEP_SEPARATE
+    assert song_snap[SETUP_STEP_KEY] == SETUP_STEP_SEPARATE
     notice = session[MIX_TAB_NOTICE_KEY]
     assert "Opened 2 files on new tabs." in notice
     assert "Chart.mid" in notice

@@ -24,6 +24,21 @@ from typing import Any, Callable
 from ui.common import DATA_DIR, delete_run, run_output_dir
 
 _JOBS_SUBDIR = "isolate_jobs"
+# Region start per run folder name, kept after a job record is forgotten.
+_OFFSETS_NAME = "video_offsets.json"
+# An upload copy no unfinished job needs is kept this long, then removed.
+UPLOAD_KEEP_SEC = 7 * 86400
+# A folder holding anything else is never treated as an upload.
+_UPLOAD_SUFFIXES = frozenset(
+    ".mp3 .wav .flac .m4a .aac .ogg .opus .aif .aiff .wma "
+    ".mp4 .mov .m4v .mkv .webm .avi .part .ytdl".split()
+)
+_PREVIEW_SUBDIR = "region_previews"
+PREVIEW_KEEP_SEC = 86400
+PREVIEW_MAX_BYTES = 200 * 1024 * 1024
+# A preview this fresh may be playing right now.
+_PREVIEW_IN_USE_SEC = 600
+_SWEPT = False
 _QUEUE_LOCK = threading.Lock()
 _WORKER_STARTED = False
 _WORKER_LOCK = threading.Lock()
@@ -431,6 +446,253 @@ def _delete_job_folder(job_id: str) -> bool:
     return not path.exists()
 
 
+def _direct_job_dir(job_id: str) -> Path | None:
+    """The job folder, only if it resolves to a direct child of ``jobs_root()``."""
+    path = jobs_root() / job_id
+    if not job_id or path.is_symlink() or not path.is_dir():
+        return None
+    if path.resolve().parent != jobs_root().resolve():
+        return None
+    return path
+
+
+def _tree_bytes(path: Path) -> int:
+    total = 0
+    for item in path.rglob("*"):
+        try:
+            if item.is_file() and not item.is_symlink():
+                total += item.stat().st_size
+        except OSError:
+            continue
+    return total
+
+
+def _prune_checkpoint(job_id: str) -> int:
+    """Remove only ``<job>/checkpoint/``. Returns bytes freed; never raises.
+
+    Call this for succeeded jobs only. NEVER for queued, running, pausing,
+    paused or failed: resume_job() re-queues paused jobs and continues from
+    checkpoint_dir=..., so a paused job MUST keep its checkpoint.
+    """
+    try:
+        job_dir = _direct_job_dir(job_id)
+        if job_dir is None:
+            return 0
+        checkpoint = job_dir / "checkpoint"
+        if checkpoint.is_symlink() or not checkpoint.is_dir():
+            return 0
+        size = _tree_bytes(checkpoint)
+        shutil.rmtree(checkpoint, ignore_errors=True)
+        return size - (_tree_bytes(checkpoint) if checkpoint.exists() else 0)
+    except OSError:
+        return 0
+
+
+def _has_finished_stems(run_dir: str, artifacts: dict[str, Any]) -> bool:
+    """True when every stem wav the job reported exists inside its run folder."""
+    if not run_dir:
+        return False
+    root = Path(run_dir).resolve()
+    wavs = [Path(str(p)) for p in artifacts.values() if str(p).lower().endswith(".wav")]
+    return bool(wavs) and all(w.is_file() and root in w.resolve().parents for w in wavs)
+
+
+def _prune_after_success(status: dict[str, Any] | None) -> None:
+    if status is None:
+        return
+    if _has_finished_stems(str(status.get("run_dir") or ""), status.get("artifacts") or {}):
+        _prune_checkpoint(str(status["id"]))
+
+
+def reclaim_checkpoints() -> tuple[int, int]:
+    """Prune checkpoints left by succeeded jobs. Returns (jobs pruned, bytes freed).
+
+    A run folder that is gone (deleted or trashed) needs no checkpoint either.
+    A run folder that exists without its stems keeps the checkpoint.
+    """
+    pruned = 0
+    freed = 0
+    for child in list(jobs_root().iterdir()):
+        status = _read_json(child / "status.json")
+        if not status or status.get("status") != "succeeded":
+            continue
+        run_dir = str(status.get("run_dir") or "")
+        if not run_dir:
+            continue
+        if Path(run_dir).exists() and not _has_finished_stems(
+            run_dir, status.get("artifacts") or {}
+        ):
+            continue
+        had = (child / "checkpoint").is_dir()
+        freed += _prune_checkpoint(child.name)
+        if had and not (child / "checkpoint").exists():
+            pruned += 1
+    return pruned, freed
+
+
+def _remember_video_offset(job_id: str, run_dir: str) -> bool:
+    """Save a job's region start so a recovered song stays in sync with its video."""
+    spec = _read_json(_spec_path(job_id)) or {}
+    try:
+        start = float(spec.get("start_sec") or 0.0)
+    except (TypeError, ValueError):
+        return True
+    if start <= 0 or spec.get("reseparate_from"):
+        return True
+    path = jobs_root() / _OFFSETS_NAME
+    offsets = _read_json(path) or {}
+    offsets[Path(run_dir).name] = start
+    try:
+        _write_json(path, offsets)
+    except OSError:
+        return False
+    return True
+
+
+def forget_jobs_for_run(run_dir: str | Path) -> int:
+    """Remove job records (spec, status, checkpoint) that point at ``run_dir``.
+
+    The run folder itself is never touched. Returns the number of records removed.
+    """
+    wanted = str(run_dir or "")
+    if not wanted:
+        return 0
+    removed = 0
+    for child in list(jobs_root().iterdir()):
+        status = _read_json(child / "status.json")
+        if not status or not _same_run_path(str(status.get("run_dir") or ""), wanted):
+            continue
+        job_dir = _direct_job_dir(child.name)
+        if job_dir is None or not _remember_video_offset(child.name, wanted):
+            continue
+        if _delete_job_folder(child.name):
+            removed += 1
+    return removed
+
+
+def _folders_in_use() -> set[Path]:
+    """Folders that a job or a song (live or trashed) still depends on."""
+    used: set[Path] = set()
+
+    def keep_parent(raw: Any) -> None:
+        if raw:
+            used.add(Path(str(raw)).resolve().parent)
+
+    for child in jobs_root().iterdir():
+        spec = _read_json(child / "spec.json") or {}
+        status = _read_json(child / "status.json") or {}
+        for raw in (spec.get("output_dir"), status.get("run_dir")):
+            if raw:
+                used.add(Path(str(raw)).resolve())
+        # Queued, paused and failed jobs still read their source to resume or retry.
+        if status.get("status") != "succeeded":
+            keep_parent(spec.get("audio_path"))
+        for raw in (status.get("artifacts") or {}).values():
+            keep_parent(raw)
+    for pattern in ("*/meta.json", "library_trash/*/meta.json"):
+        for meta_path in DATA_DIR.glob(pattern):
+            artifacts = (_read_json(meta_path) or {}).get("artifacts")
+            if isinstance(artifacts, dict):
+                for raw in artifacts.values():
+                    keep_parent(raw)
+    return used
+
+
+def _stale_upload_bytes(folder: Path, cutoff: float) -> int | None:
+    """Size of ``folder`` when it is an old upload copy, otherwise None."""
+    try:
+        uuid.UUID(folder.name)
+        if folder.is_symlink() or not folder.is_dir():
+            return None
+        # The folder date matters: copy2 keeps the original file's old date.
+        if folder.stat().st_mtime > cutoff:
+            return None
+        total = 0
+        for item in folder.iterdir():
+            if item.is_symlink() or not item.is_file():
+                return None
+            if not item.name.startswith(".") and item.suffix.lower() not in _UPLOAD_SUFFIXES:
+                return None
+            info = item.stat()
+            if info.st_mtime > cutoff and not item.name.startswith("."):
+                return None
+            total += info.st_size
+        return total
+    except (OSError, ValueError):
+        return None
+
+
+def sweep_uploads(*, max_age_sec: float = UPLOAD_KEEP_SEC) -> tuple[int, int]:
+    """Remove old upload copies nothing depends on. Returns (folders, bytes freed).
+
+    Only direct children of ``DATA_DIR`` with a generated (UUID) name, no
+    ``meta.json`` and nothing but audio or video files qualify.
+    """
+    if not DATA_DIR.is_dir():
+        return 0, 0
+    cutoff = time.time() - max_age_sec
+    used = _folders_in_use()
+    removed = 0
+    freed = 0
+    for folder in list(DATA_DIR.iterdir()):
+        size = _stale_upload_bytes(folder, cutoff)
+        if size is None or folder.resolve() in used:
+            continue
+        if delete_run(folder):
+            removed += 1
+            freed += size
+    return removed, freed
+
+
+def prune_region_previews(*, max_bytes: int = PREVIEW_MAX_BYTES) -> int:
+    """Drop old previews, then the oldest until under the cap. Returns bytes freed.
+
+    Previews are a cache: ensure_region_preview_wav() rebuilds a missing one.
+    """
+    cache = DATA_DIR / _PREVIEW_SUBDIR
+    if cache.is_symlink() or not cache.is_dir():
+        return 0
+    files = []
+    for path in cache.iterdir():
+        if path.is_symlink() or not path.is_file():
+            continue
+        info = path.stat()
+        files.append((info.st_mtime, info.st_size, path))
+    files.sort()
+    total = sum(size for _, size, _ in files)
+    now = time.time()
+    freed = 0
+    for modified, size, path in files:
+        age = now - modified
+        if age < _PREVIEW_IN_USE_SEC or (age < PREVIEW_KEEP_SEC and total <= max_bytes):
+            continue
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        total -= size
+        freed += size
+    return freed
+
+
+def sweep_storage() -> None:
+    """Automatic cleanup. Never raises: it must not break a page or the worker."""
+    for step in (sweep_uploads, prune_region_previews):
+        try:
+            step()
+        except Exception:
+            traceback.print_exc()
+
+
+def sweep_storage_once() -> None:
+    """Run the automatic cleanup the first time this app process asks."""
+    global _SWEPT
+    if _SWEPT:
+        return
+    _SWEPT = True
+    sweep_storage()
+
+
 def _artifacts_from_completed_run(output_dir: Path) -> dict[str, str] | None:
     """Stem paths from meta.json or wavs on disk when the child exited mid-success."""
     meta_path = output_dir / "meta.json"
@@ -514,7 +776,7 @@ def _finalize_job_after_process(job_id: str) -> None:
         if spec is not None and spec.output_dir:
             artifacts = _artifacts_from_completed_run(Path(spec.output_dir))
         if artifacts:
-            write_status(
+            done = write_status(
                 job_id,
                 status="succeeded",
                 stage="done",
@@ -530,6 +792,7 @@ def _finalize_job_after_process(job_id: str) -> None:
                 error=None,
                 traceback=None,
             )
+            _prune_after_success(done)
             return
         write_status(
             job_id,
@@ -728,7 +991,11 @@ def video_offset_sec_for_run(run_dir: str | Path | None) -> float:
             return max(0.0, float(spec.get("start_sec") or 0.0))
         except (TypeError, ValueError):
             return 0.0
-    return 0.0
+    saved = (_read_json(root / _OFFSETS_NAME) or {}).get(wanted.name)
+    try:
+        return max(0.0, float(saved or 0.0))
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def list_jobs(*, limit: int = 20) -> list[dict[str, Any]]:
@@ -1159,7 +1426,7 @@ def _run_one_job_inner(job_id: str) -> None:
         latest = read_status(job_id)
         if latest and latest.get("status") in ("cancelled", "pausing"):
             return
-        write_status(
+        done = write_status(
             job_id,
             status="succeeded",
             stage="done",
@@ -1184,6 +1451,7 @@ def _run_one_job_inner(job_id: str) -> None:
             tab_warning=tab_warning,
             **eta_fields,
         )
+        _prune_after_success(done)
     except JobAborted:
         return
     except Exception as exc:
@@ -1276,6 +1544,7 @@ def _worker_loop() -> None:
                 with _QUEUE_LOCK:
                     _ACTIVE_JOB_ID = job_id
                 _execute_job(job_id)
+                sweep_storage()
             finally:
                 with _QUEUE_LOCK:
                     if _ACTIVE_JOB_ID == job_id:

@@ -18,6 +18,10 @@ type Args = {
   tabs?: TabInfo[];
 };
 
+// One fixed height, matching the host CSS. Auto-measuring on every render
+// fought the host pin and stepped the strip (I-632).
+const STRIP_HEIGHT_PX = 48;
+
 function applyTheme(theme?: Theme): void {
   const root = document.documentElement;
   if (!theme) return;
@@ -370,7 +374,7 @@ function updateTabsInPlace(root: HTMLElement, args: Args, tabs: TabInfo[]): bool
     const selected = bar.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
     selected?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
-  requestAnimationFrame(() => Streamlit.setFrameHeight());
+  Streamlit.setFrameHeight(STRIP_HEIGHT_PX);
   return true;
 }
 
@@ -450,13 +454,25 @@ function renderUI(args: Args): void {
   }
 
   root.dataset.structure = structureKey(homeLabel, showPlus, tabs);
-  requestAnimationFrame(() => Streamlit.setFrameHeight());
+  Streamlit.setFrameHeight(STRIP_HEIGHT_PX);
+}
+
+// Host passes get_iframe_theme_vars() as themeVars. Unapplied, iframe-theme.css
+// fell back to the old Forest greens on the navy page (I-633).
+function applyThemeVars(vars: unknown): void {
+  if (!vars || typeof vars !== "object") return;
+  const root = document.documentElement;
+  for (const [name, value] of Object.entries(vars as Record<string, unknown>)) {
+    if (name.startsWith("--") && typeof value === "string") root.style.setProperty(name, value);
+  }
 }
 
 function onRender(event: Event): void {
   const data = (event as CustomEvent<RenderData>).detail;
+  const args = (data.args || {}) as Args & { themeVars?: unknown };
   applyTheme(data.theme);
-  renderUI((data.args || {}) as Args);
+  applyThemeVars(args.themeVars);
+  renderUI(args);
 }
 
 window.addEventListener("resize", () => {
@@ -467,4 +483,4 @@ window.addEventListener("resize", () => {
 
 Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
 Streamlit.setComponentReady();
-Streamlit.setFrameHeight(48);
+Streamlit.setFrameHeight(STRIP_HEIGHT_PX);

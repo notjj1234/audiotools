@@ -270,8 +270,13 @@ def test_player_sources_have_the_local_controls():
 def test_song_studio_stays_below_the_mixer():
     source = Path("ui/pages/isolate.py").read_text(encoding="utf-8")
     workspace = source.split("def _render_mixer_workspace", 1)[1].split("\ndef ", 1)[0]
-    assert workspace.index("_mixer_and_downloads_fragment(") < workspace.index("render_song_studio(")
-    assert "expanded=False" in workspace
+    # Song studio is one of the More tools under the mixer, closed until picked.
+    assert workspace.index("_mixer_and_downloads_fragment(") < workspace.index("_render_mix_tools(")
+    tools = source.split("def _render_mix_tools", 1)[1].split("\ndef ", 1)[0]
+    # Nothing renders until a tool is picked; the panel then draws Song studio.
+    assert "if tool is not None:\n        _render_mix_tool_panel(" in tools
+    panel = source.split("def _render_mix_tool_panel", 1)[1].split("\ndef ", 1)[0]
+    assert "render_song_studio(run_dir)" in panel
 
 
 def test_skips_are_recorded_for_native_products():

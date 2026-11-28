@@ -343,3 +343,54 @@ strong enough to remove most of the bleed would also remove legitimate guitar
 content, which contradicts the "never damage legitimate low-end guitar
 content" requirement for this mitigation. The conservative, clearly-labeled
 high-pass filter above is the bounded, honest mitigation implemented instead.
+
+## v2 engine (2026-11-24) — how quality was judged
+
+`split_lead_rhythm_guitar` v2 adds the temporal (who-plays-when) method, per-bin
+stereo masks, stereo full-length stems, and a voicing (pYIN) second opinion on
+labels. The fixed register crossover is now a last resort that needs a clear
+single-note lead. Pass `vocals` in a manifest entry to give the temporal method
+its strongest cue (vocal silence ≈ solo).
+
+Judged on synthetic songs with known parts (`role_switch_song` in
+`make_synthetic_clips.py`, plus hard-pan / doubled-rhythm variants): SI-SDR of
+each emitted stem vs its ground truth, solo boundaries within ~1 s, Lead +
+Rhythm == Guitar, stems stereo and non-silent at the end, and confident-mode
+refusal on single-role material. Confident mode, `--no-basic-pitch`:
+
+| case | v1 | v2 |
+|------|----|----|
+| one centered track: strum → solo (vocals stop) → strum | register, 7.4 / 6.5 dB, mono | temporal, 26.7 / 26.1 dB |
+| same, 100 s (old 90 s render cut-off) | 6.2 / 4.0 dB, silent after 90 s | 32.6 / 33.7 dB, full length |
+| hard-panned rhythm L / lead R, playing together | refused | spatial, 29.7 / 16.6 dB, stereo kept |
+| doubled rhythm wide L/R (20 ms apart) + centered lead | refused | mid/side coherence mask, 11.9 / 9.7 dB, labels correct (was 7.0 / 3.5 dB with the energy-ratio mask) |
+| strumming only, vocals throughout | — | refused (one Guitar + message) |
+
+(lead / rhythm SI-SDR). Synthetic tones are not real guitars: **real-song
+quality is unverified** until rights-cleared multitracks are scored here.
+Dead-center, same-register, simultaneous parts still need a trained model.
+
+### Emit modes (2026-11-24 follow-up)
+
+- `confident` — emit only when every gate passes (CLI default).
+- `prefer_split` — **what the app uses when the person ticks "Split lead and
+  rhythm"**: whenever two distinct parts separate well, emit them, even if
+  which one is the lead is uncertain (`reason_code=split_labels_unsure`; the
+  desktop mixer offers *Swap Lead and Rhythm*). A single part (mono, strumming
+  only, register crossover without a single-note lead) still stays one Guitar.
+- `best_effort` — always emit (legacy `dual_guitar`, eval).
+
+Best-guess labels pool note statistics, single-note (pYIN) confidence,
+brightness (weak) and a small "centered part is the lead" prior. Only the
+chosen candidate is rendered for the full song; the others are scored on the
+analysis window, so long songs no longer render three full-length splits.
+
+### Speed (2026-11-26)
+
+4-minute synthetic song (two solos), confident split, `--no-basic-pitch`:
+25.5 s → 13.4 s with identical sections and SI-SDR (32.9 dB). Changes: the
+diagnostics-only HPSS candidate is built only when `allow_spectral_emit` is on;
+the full-song render of a simultaneous split happens only when that split is
+written; the second stream of every mask render is `input − first` (half the
+inverse STFTs, exact sum); pYIN runs at a ~93 ms hop; note polyphony uses
+sorted searches instead of an all-pairs loop.
