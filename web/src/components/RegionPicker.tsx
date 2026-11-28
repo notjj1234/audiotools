@@ -119,7 +119,10 @@ export function RegionPicker({
     regions.on("region-updated", (region) => {
       if (suppressingRef.current || region.id !== "selection") return;
       onChangeRef.current(region.start, region.end);
-      region.play(true);
+      // Match desktop: only restart playback if already playing.
+      if (ws.isPlaying()) {
+        region.play(true);
+      }
     });
 
     return () => {
@@ -170,7 +173,7 @@ export function RegionPicker({
           type="button"
           className="secondary"
           ref={playBtnRef}
-          disabled
+          disabled={!ready}
           onClick={togglePlay}
         >
           Play selection

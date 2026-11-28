@@ -243,6 +243,50 @@ def test_isolate_job_create_succeeds_while_runner_slot_held(single_flight_client
     single_flight.release()
 
 
+def test_tab_create_skips_api_slot_when_worker_mode(tmp_path, monkeypatch):
+    """With USE_WORKER, create must not acquire the in-process lock (worker owns it)."""
+    main_mod = configure_backend(
+        tmp_path,
+        monkeypatch,
+        ATT_REQUIRE_AUTH="false",
+        ATT_DEMO_MODE="true",
+        ATT_SINGLE_FLIGHT_JOBS="true",
+        ATT_USE_WORKER="true",
+        ATT_MAX_JOB_DURATION_SEC="90",
+    )
+    from backend.jobs import single_flight
+
+    single_flight.release()
+    acquire = Mock(wraps=single_flight.acquire_or_503)
+    monkeypatch.setattr(single_flight, "acquire_or_503", acquire)
+
+    async def noop_enqueue(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(main_mod, "_enqueue_or_run", noop_enqueue)
+
+    with TestClient(main_mod.app) as client:
+        headers = login_headers(client)
+        upload = client.post(
+            "/v1/uploads/audio",
+            headers=headers,
+            files={"file": ("mix.wav", fake_wav_bytes(), "audio/wav")},
+        )
+        assert upload.status_code == 200
+        created = client.post(
+            "/v1/jobs",
+            headers=headers,
+            json={"upload_id": upload.json()["upload_id"], "max_duration_sec": 15},
+        )
+        assert created.status_code == 200, created.text
+
+    # API still calls acquire_or_503, but with enabled=False so the slot stays free.
+    assert acquire.called
+    assert any(call.kwargs.get("enabled") is False for call in acquire.call_args_list)
+    assert not single_flight.is_busy()
+    single_flight.release()
+
+
 def test_single_flight_disabled_allows_concurrent_create(tmp_path, monkeypatch):
     main_mod = configure_backend(
         tmp_path,

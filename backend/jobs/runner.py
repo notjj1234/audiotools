@@ -7,12 +7,12 @@ import logging
 import zipfile
 from pathlib import Path
 
+from audio_to_tab.isolate import IsolateConfig, isolate_timeout_multiplier, separate_stems
+from audio_to_tab.pipeline import PipelineConfig, run_pipeline
 from backend.config import settings
 from backend.contracts import JobKind, JobStatus
 from backend.jobs import single_flight
 from backend.jobs.manager import JobManager
-from audio_to_tab.isolate import IsolateConfig, isolate_timeout_multiplier, separate_stems
-from audio_to_tab.pipeline import PipelineConfig, run_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,24 @@ def _public_job_error(exc: BaseException) -> str:
 
 
 async def run_job_async(job_manager: JobManager, job_id: str) -> None:
+    """Run a tab job; own the single-flight slot when worker mode is on."""
+    # In-process (use_worker=false): API already acquired; we only release.
+    # Worker mode: API skipped acquire (different process); wait/acquire here.
+    acquire_here = bool(settings.single_flight_jobs and settings.use_worker)
+    release_here = bool(settings.single_flight_jobs)
+    acquired = False
     try:
+        if acquire_here:
+            while not single_flight.try_acquire():
+                if job_manager.is_cancel_requested(job_id):
+                    job_manager.set_cancelled(job_id)
+                    await job_manager.emit(job_id, "cancelled", "Cancelled", JobStatus.cancelled)
+                    return
+                await asyncio.sleep(0.5)
+            acquired = True
         await _run_job_async(job_manager, job_id)
     finally:
-        if settings.single_flight_jobs:
+        if release_here and (acquired or not acquire_here):
             single_flight.release()
 
 

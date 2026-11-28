@@ -102,6 +102,64 @@ def is_youtube_url(url: str) -> bool:
 _DIRECT_MEDIA_SUFFIXES = frozenset({".mp3", ".wav", ".flac", ".m4a", ".mp4", ".mov", ".webm", ".mkv"})
 _DIRECT_MEDIA_MAX_BYTES = 500 * 1024 * 1024
 _DIRECT_MEDIA_BLOCKED_HOSTS = frozenset({"localhost", "127.0.0.1", "0.0.0.0", "::1"})
+# Cloud metadata / link-local names that must never be fetched even if DNS is odd.
+_DIRECT_MEDIA_METADATA_HOSTS = frozenset(
+    {
+        "metadata.google.internal",
+        "metadata.google",
+        "instance-data",
+    }
+)
+
+
+def _is_blocked_ip(host: str) -> bool:
+    """True if host is a literal IP in a non-public range (SSRF guard)."""
+    import ipaddress
+
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
+def _hostname_blocked(host: str) -> bool:
+    host = (host or "").lower().rstrip(".")
+    if not host:
+        return True
+    if host in _DIRECT_MEDIA_BLOCKED_HOSTS or host.endswith(".localhost"):
+        return True
+    if host in _DIRECT_MEDIA_METADATA_HOSTS or host.endswith(".internal"):
+        return True
+    return bool(_is_blocked_ip(host))
+
+
+def _resolved_ips_safe(host: str) -> bool:
+    """Resolve host and reject if any address is non-public."""
+    import socket
+
+    if _hostname_blocked(host):
+        return False
+    if _is_blocked_ip(host):
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        addr = info[4][0]
+        if _is_blocked_ip(addr):
+            return False
+    return True
 
 
 def is_direct_media_url(url: str) -> bool:
@@ -113,21 +171,32 @@ def is_direct_media_url(url: str) -> bool:
     if is_youtube_url(text):
         return False
     host = (parsed.hostname or "").lower().rstrip(".")
-    if not host or host in _DIRECT_MEDIA_BLOCKED_HOSTS or host.endswith(".localhost"):
+    if _hostname_blocked(host):
         return False
     return Path(parsed.path).suffix.lower() in _DIRECT_MEDIA_SUFFIXES
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects so a public .wav URL cannot bounce to an internal host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError("Redirects are not allowed for direct media downloads")
 
 
 def download_direct_media(url: str, output_dir: str | Path) -> Path:
     """Save a direct media link into ``output_dir``. No YouTube, no HTML page."""
     if not is_direct_media_url(url):
         raise ValueError("Only a direct audio or video link is allowed")
+    host = (urlparse(url.strip()).hostname or "").lower().rstrip(".")
+    if not _resolved_ips_safe(host):
+        raise ValueError("That media host is not allowed")
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     name = Path(urlparse(url.strip()).path).name
     dest = out_dir / name
     request = urllib.request.Request(url.strip(), headers={"User-Agent": "AudioTools"})
-    with urllib.request.urlopen(request, timeout=60) as response:
+    opener = urllib.request.build_opener(_NoRedirect)
+    with opener.open(request, timeout=60) as response:
         data = response.read(_DIRECT_MEDIA_MAX_BYTES + 1)
     if len(data) > _DIRECT_MEDIA_MAX_BYTES:
         raise ValueError("That file is larger than 500 MB")

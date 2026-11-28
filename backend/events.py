@@ -12,6 +12,18 @@ from backend.contracts import JobEvent, JobStatus
 
 logger = logging.getLogger(__name__)
 
+_redis_sync_client = None
+
+
+def _sync_redis():
+    """Reuse one sync Redis client for job event publish (worker mode)."""
+    global _redis_sync_client
+    if _redis_sync_client is None:
+        import redis
+
+        _redis_sync_client = redis.from_url(settings.redis_url)
+    return _redis_sync_client
+
 
 class EventBus:
     def __init__(self) -> None:
@@ -39,9 +51,7 @@ class EventBus:
         if not settings.use_worker:
             return
         try:
-            import redis
-
-            r = redis.from_url(settings.redis_url)
+            r = _sync_redis()
             r.publish(f"job:{event.job_id}", event.model_dump_json())
         except Exception:
             logger.debug("Redis publish failed", exc_info=True)

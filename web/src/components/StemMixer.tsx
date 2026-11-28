@@ -219,25 +219,33 @@ export function StemMixer({
       return;
     }
     if (!window.confirm("Start the microphone and record this take?")) return;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    const chunks: BlobPart[] = [];
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunks.push(event.data);
-    };
-    recorder.onstop = () => {
-      stream.getTracks().forEach((track) => track.stop());
-      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "practice-take.webm";
-      link.click();
-      URL.revokeObjectURL(url);
-      recorderRef.current = null;
-    };
-    recorderRef.current = recorder;
-    recorder.start();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "practice-take.webm";
+        link.click();
+        URL.revokeObjectURL(url);
+        recorderRef.current = null;
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+    } catch (err) {
+      setStatus(
+        err instanceof Error
+          ? `Microphone unavailable: ${err.message}`
+          : "Microphone unavailable"
+      );
+    }
   };
 
   const toggleMute = (id: string) => {

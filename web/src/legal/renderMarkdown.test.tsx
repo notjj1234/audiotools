@@ -15,4 +15,11 @@ describe("renderMarkdown headings", () => {
     const nodes = renderMarkdown("# Privacy policy\n\n## What Audio Tools is\n");
     expect(nodes.map((node) => (node as { type: string }).type)).toEqual(["h1", "h2"]);
   });
+
+  it("strips javascript: and other unsafe link schemes", () => {
+    const nodes = renderMarkdown("See [x](javascript:alert(1)) and [ok](https://example.com).\n");
+    const html = JSON.stringify(nodes);
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain("https://example.com");
+  });
 });
