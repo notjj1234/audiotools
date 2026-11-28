@@ -38,6 +38,7 @@ class EventBus:
     def publish_redis(self, event: JobEvent) -> None:
         if not settings.use_worker:
             return
+        r = None
         try:
             import redis
 
@@ -45,6 +46,12 @@ class EventBus:
             r.publish(f"job:{event.job_id}", event.model_dump_json())
         except Exception:
             logger.debug("Redis publish failed", exc_info=True)
+        finally:
+            if r is not None:
+                try:
+                    r.close()
+                except Exception:
+                    logger.debug("Redis client close failed", exc_info=True)
 
     async def publish(self, event: JobEvent) -> None:
         await self.publish_local(event)

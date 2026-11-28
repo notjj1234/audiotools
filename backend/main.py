@@ -158,9 +158,25 @@ def _job_response(job, user_id: str) -> JobResponse:
 
 
 def _rate_key(request: Request) -> str:
+    """Key SlowAPI limits by authenticated user when a Bearer token is present.
+
+    SlowAPI runs ``key_func`` before the endpoint body, so ``request.state.user_id``
+    (set inside handlers) is never available here. Decode the access JWT instead.
+    """
     user = getattr(request.state, "user_id", None)
     if user:
         return f"user:{user}"
+    auth = request.headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        token = auth.split(" ", 1)[1].strip()
+        if token:
+            try:
+                payload = decode_token(token, "access")
+                sub = payload.get("sub")
+                if sub:
+                    return f"user:{sub}"
+            except HTTPException:
+                pass
     return get_remote_address(request)
 
 
@@ -375,7 +391,10 @@ async def create_job(
         demucs_quality = "balanced"
         demucs_device = "cpu"
 
-    single_flight.acquire_or_503(enabled=settings.single_flight_jobs)
+    # In-process only: the in-memory lock cannot be released by an arq worker
+    # in another process. Worker + single_flight acquires inside run_job_async.
+    api_holds_slot = bool(settings.single_flight_jobs and not settings.use_worker)
+    single_flight.acquire_or_503(enabled=api_holds_slot)
     try:
         job = job_manager.create_job(
             user_id=user.id,
@@ -397,11 +416,11 @@ async def create_job(
             sub_bass_debleed=body.sub_bass_debleed,
         )
     except FileNotFoundError as exc:
-        if settings.single_flight_jobs:
+        if api_holds_slot:
             single_flight.release()
         raise HTTPException(404, str(exc)) from None
     except Exception:
-        if settings.single_flight_jobs:
+        if api_holds_slot:
             single_flight.release()
         raise
 
@@ -409,7 +428,7 @@ async def create_job(
     try:
         await _enqueue_or_run(background_tasks, "tab", job.id)
     except BaseException:
-        if settings.single_flight_jobs:
+        if api_holds_slot:
             single_flight.release()
         raise
     return _job_response(job, user.id)
@@ -565,13 +584,15 @@ def get_artifact(
     tmp = storage.open_temp(key, suffix=Path(key).suffix)
 
     def _iter():
-        with open(tmp, "rb") as f:
-            while True:
-                chunk = f.read(1024 * 1024)
-                if not chunk:
-                    break
-                yield chunk
-        tmp.unlink(missing_ok=True)
+        try:
+            with open(tmp, "rb") as f:
+                while True:
+                    chunk = f.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+        finally:
+            tmp.unlink(missing_ok=True)
 
     return StreamingResponse(_iter(), media_type=media, headers={
         "Content-Disposition": f'attachment; filename="{filename}"'
@@ -600,13 +621,15 @@ def get_artifact_signed(job_id: str, kind: str, token: str, uid: str):
     tmp = storage.open_temp(key, suffix=Path(key).suffix)
 
     def _iter():
-        with open(tmp, "rb") as f:
-            while True:
-                chunk = f.read(1024 * 1024)
-                if not chunk:
-                    break
-                yield chunk
-        tmp.unlink(missing_ok=True)
+        try:
+            with open(tmp, "rb") as f:
+                while True:
+                    chunk = f.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+        finally:
+            tmp.unlink(missing_ok=True)
 
     return StreamingResponse(
         _iter(),

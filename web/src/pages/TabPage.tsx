@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import * as api from "../api";
 import { JobProgress } from "../components/JobProgress";
 import { ProcessingModeSelect } from "../components/ProcessingModeSelect";
@@ -16,6 +16,12 @@ export function TabPage() {
   const [error, setError] = useState<string | null>(null);
   const [job, setJob] = useState<api.JobResponse | null>(null);
   const [stopWatch, setStopWatch] = useState<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      stopWatch?.();
+    };
+  }, [stopWatch]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

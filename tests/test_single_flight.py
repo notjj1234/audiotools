@@ -243,6 +243,56 @@ def test_isolate_job_create_succeeds_while_runner_slot_held(single_flight_client
     single_flight.release()
 
 
+def test_tab_create_skips_api_slot_when_worker_mode(tmp_path, monkeypatch):
+    """Worker mode must not acquire the in-memory lock in the API process.
+
+    Otherwise ``release()`` in the arq worker clears a different process's flag
+    and the API stays busy forever (permanent 503 on tab create).
+    """
+    main_mod = configure_backend(
+        tmp_path,
+        monkeypatch,
+        ATT_REQUIRE_AUTH="false",
+        ATT_DEMO_MODE="true",
+        ATT_SINGLE_FLIGHT_JOBS="true",
+        ATT_USE_WORKER="true",
+        ATT_MAX_JOB_DURATION_SEC="90",
+    )
+    from backend.jobs import single_flight
+
+    single_flight.release()
+
+    async def noop_enqueue(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(main_mod, "_enqueue_or_run", noop_enqueue)
+
+    with TestClient(main_mod.app) as client:
+        headers = login_headers(client)
+        upload = client.post(
+            "/v1/uploads/audio",
+            headers=headers,
+            files={"file": ("mix.wav", fake_wav_bytes(), "audio/wav")},
+        )
+        assert upload.status_code == 200
+        created = client.post(
+            "/v1/jobs",
+            headers=headers,
+            json={"upload_id": upload.json()["upload_id"], "max_duration_sec": 15},
+        )
+        assert created.status_code == 200, created.text
+        assert not single_flight.is_busy()
+        # A second create must not 503 — the worker owns the lock, not the API.
+        again = client.post(
+            "/v1/jobs",
+            headers=headers,
+            json={"upload_id": upload.json()["upload_id"], "max_duration_sec": 15},
+        )
+        assert again.status_code == 200, again.text
+
+    single_flight.release()
+
+
 def test_single_flight_disabled_allows_concurrent_create(tmp_path, monkeypatch):
     main_mod = configure_backend(
         tmp_path,

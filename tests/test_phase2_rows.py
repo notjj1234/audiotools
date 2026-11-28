@@ -32,6 +32,11 @@ def test_direct_media_url_accepts_a_file_link_and_rejects_the_rest():
     assert not is_direct_media_url("file:///tmp/song.mp3")
     assert not is_direct_media_url("https://localhost/song.wav")
     assert not is_direct_media_url("https://127.0.0.1/song.wav")
+    # Literal private / link-local / metadata IPs (SSRF)
+    assert not is_direct_media_url("http://10.0.0.5/song.wav")
+    assert not is_direct_media_url("http://192.168.1.10/song.wav")
+    assert not is_direct_media_url("http://169.254.169.254/latest/song.wav")
+    assert not is_direct_media_url("http://[::1]/song.wav")
 
 
 def test_download_direct_media_saves_the_bytes(tmp_path: Path):
@@ -39,13 +44,20 @@ def test_download_direct_media_saves_the_bytes(tmp_path: Path):
         def read(self, n=-1):
             return b"RIFF"
 
+        def geturl(self):
+            return "https://cdn.example.com/song.wav"
+
         def __enter__(self):
             return self
 
         def __exit__(self, *args):
             return False
 
-    with patch("urllib.request.urlopen", return_value=FakeResponse()):
+    fake_opener = type("Opener", (), {"open": staticmethod(lambda *_a, **_k: FakeResponse())})()
+    with (
+        patch("audio_to_tab.ingest._host_resolves_public", return_value=True),
+        patch("urllib.request.build_opener", return_value=fake_opener),
+    ):
         path = download_direct_media("https://cdn.example.com/song.wav", tmp_path)
     assert path.name == "song.wav"
     assert path.read_bytes() == b"RIFF"
@@ -56,6 +68,16 @@ def test_download_direct_media_rejects_a_page(tmp_path: Path):
 
     with pytest.raises(ValueError, match="direct audio or video"):
         download_direct_media("https://example.com/playlist", tmp_path)
+
+
+def test_download_direct_media_rejects_private_resolved_host(tmp_path: Path):
+    import pytest
+
+    with (
+        patch("audio_to_tab.ingest._host_resolves_public", return_value=False),
+        pytest.raises(ValueError, match="direct audio or video"),
+    ):
+        download_direct_media("https://cdn.example.com/song.wav", tmp_path)
 
 
 def test_lead_rhythm_stays_off_until_the_guitar_job_opts_in():
